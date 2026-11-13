@@ -285,7 +285,7 @@ const ASSETS=window.MOTD_ASSETS||{};
 const $=id=>document.getElementById(id);
 const canvas=$('game'),ctx=canvas.getContext('2d');
 let W=0,H=0,dpr=1,dprCap=9;
-const TILE=38,ISOX=1,ISOY=.53,world={w:32,h:26,y0:-9},TAU=Math.PI*2;
+const TILE=38,ISOX=1,ISOY=.53,world={w:32,h:26,y0:-18},TAU=Math.PI*2;
 const rand=(a,b)=>a+Math.random()*(b-a),clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),lerp=(a,b,t)=>a+(b-a)*t;
 const r2=v=>Math.round(v*100)/100;
 const pick=a=>a[Math.floor(Math.random()*a.length)];
@@ -327,14 +327,14 @@ const characters=[
 // ---------------------------------------------------------------- map
 function rect(x,y,w,h,type,solid=true){const p={x,y,w,h,type,solid};props.push(p);return p}
 function rebuildBlocks(){blocks.length=0;for(const p of props)if(p.solid)blocks.push(p);walkDirty=true}
-const BARREL_SPOTS=[[6.5,-4.6],[25.2,-5.4],[12.9,6.4],[18.6,6.4],[8.3,13.3],[23.2,16.7],[12.9,20.8],[18.8,20.8]];
+const BARREL_SPOTS=[[5.3,-13.0],[26.2,-7.2],[8.0,-1.5],[24.5,-12.5],[15.4,-6.0],[12.9,6.4],[18.6,6.4],[8.3,13.3],[23.2,16.7],[12.9,20.8],[18.8,20.8]];
 const STATIC_LIGHTS=[
   {x:16,y:11.5,z:1.6,r:6.2,c:'tree'},{x:20.3,y:12.4,z:.6,r:3.4,c:'#cfe0ff'},
   {x:3.5,y:2.7,z:.8,r:2.6,c:'#c9b8ff'},{x:8.6,y:2.7,z:.8,r:2.6,c:'#ffc79a'},{x:23.4,y:2.7,z:.8,r:2.6,c:'#a6ffe9'},{x:28.5,y:2.7,z:.8,r:2.6,c:'#ffe79a'},
   {x:27,y:8.5,z:.8,r:2.6,c:'#e0b6ff'},{x:27.1,y:15.6,z:.8,r:2.6,c:'#aee6ff'},{x:27.1,y:19.7,z:.8,r:2.6,c:'#ffd0b0'},
   {x:5.8,y:21.2,z:.9,r:3.6,c:'#ffe2b0'},
-  {x:5.5,y:-4.5,z:1.5,r:4.6,c:'#ffd9a0'},{x:26.5,y:-4.5,z:1.5,r:4.6,c:'#ffd9a0'},{x:16,y:-7.5,z:1.5,r:4.8,c:'#ffd9a0'},{x:16,y:-1.2,z:1.4,r:4.2,c:'#ffd9a0'},
-  {x:10.6,y:-4.6,z:.5,r:2.8,c:'#ff8a3a'},{x:21.7,y:-5.0,z:.5,r:2.8,c:'#ff8a3a'},
+  {x:6,y:-12.8,z:1.5,r:4.6,c:'#ffd9a0'},{x:26,y:-12.8,z:1.5,r:4.6,c:'#ffd9a0'},{x:6,y:-7.0,z:1.5,r:4.6,c:'#ffd9a0'},{x:26,y:-7.0,z:1.5,r:4.6,c:'#ffd9a0'},{x:16,y:-15.6,z:1.5,r:4.6,c:'#ffd9a0'},{x:16,y:-10.0,z:1.5,r:4.6,c:'#ffd9a0'},{x:16,y:-4.5,z:1.5,r:4.6,c:'#ffd9a0'},{x:16,y:-1.2,z:1.5,r:4.6,c:'#ffd9a0'},
+  {x:14.1,y:-7.45,z:.5,r:2.8,c:'#ff8a3a'},{x:18.3,y:-12.95,z:.5,r:2.8,c:'#ff8a3a'},{x:7.15,y:-9.9,z:.5,r:2.8,c:'#ff8a3a'},{x:27.35,y:-4.1,z:.5,r:2.8,c:'#ff8a3a'},
   {x:16,y:.8,z:.2,r:4.2,c:'#9db9ff'},{x:16,y:25.2,z:.2,r:4.2,c:'#9db9ff'},{x:.8,y:13,z:.2,r:4.2,c:'#9db9ff'},{x:31.2,y:13,z:.2,r:4.2,c:'#9db9ff'}
 ];
 function build(){
@@ -374,23 +374,22 @@ function build(){
   props.push({x:5.85,y:20.2,w:0,h:0,type:'sign',solid:false,renderOrder:999});
   // South-east service corner.
   rect(20.5,22.2,2.2,.75,'bench');rect(25,22.2,2.2,.75,'planter');
-  // ---- Car park outside the north (2 o'clock) entrance
+  // ---- Car park outside the north (2 o'clock) entrance. Wide aisles and gaps on purpose: bosses are big.
   const CAR=['#c23b3b','#3b6fc2','#d9d9d9','#2f2f33','#e0b13a','#3fae7a','#8a5ac2','#b86a2e'];
   let ci=0;const car=(x,y,vert=true,c)=>{const p=rect(x,y,vert?1.1:2.2,vert?2.2:1.1,'car');p.c=c||CAR[(ci++)%CAR.length];return p};
   const wreck=(x,y,vert,c)=>{const p=rect(x,y,vert?1.1:2.2,vert?2.2:1.1,'wreck');p.c=c||'#4a3b34';p.seed=x*7+y;return p};
-  for(const x of [1.8,3.5,5.2,8.1,9.8])car(x,-8.0);
-  for(const x of [1.8,5.2,9.8])car(x,-3.6);
-  for(const x of [22.0,23.7,26.6,28.3])car(x,-8.0);
-  for(const x of [23.4,26.6,29.1])car(x,-3.6);
-  wreck(10.3,-5.2,false,'#5a3b30');wreck(20.6,-5.5,true,'#33363b');wreck(16.4,-4.5,false,'#6a4a36');
+  const WB=[1.4,4.0,6.6,9.2],EB=[21.6,24.2,26.8,29.4],ROWS=[-16.8,-11.0,-5.2];
+  const park=(xs,y,idx)=>{for(const i of idx)car(xs[i],y)};
+  park(WB,ROWS[0],[0,2,3]);park(EB,ROWS[0],[0,1,3]);
+  park(WB,ROWS[1],[0,1]);park(EB,ROWS[1],[1,2,3]);
+  park(WB,ROWS[2],[1,3]);park(EB,ROWS[2],[0,3]);
+  wreck(WB[2],ROWS[1],true,'#5a3b30');wreck(EB[2],ROWS[2],true,'#33363b');
+  wreck(13.0,-8.0,false,'#6a4a36');wreck(17.2,-13.5,false,'#2e3338');
   rect(12.4,-2.3,2.0,.45,'barrier');rect(17.8,-1.7,1.7,.45,'barrier');rect(21.3,-1.6,1.6,.45,'barrier');
   rect(.9,-1.1,1.4,.8,'dumpster');rect(29.7,-1.1,1.4,.8,'dumpster');
-  rect(13.8,-6.6,.7,.7,'crate');rect(14.6,-6.3,.7,.7,'crate');rect(18.7,-7.0,.7,.7,'crate');
-  props.push({x:12.3,y:-4.1,w:0,h:0,type:'debris',solid:false,renderOrder:-5,seed:1});
-  props.push({x:19.4,y:-3.1,w:0,h:0,type:'debris',solid:false,renderOrder:-5,seed:2});
-  props.push({x:6.8,y:-6.2,w:0,h:0,type:'debris',solid:false,renderOrder:-5,seed:3});
-  props.push({x:25.4,y:-6.2,w:0,h:0,type:'debris',solid:false,renderOrder:-5,seed:4});
-  for(const [x,y] of [[5.5,-4.5],[26.5,-4.5],[16,-7.5],[16,-1.2]])props.push({x,y,w:0,h:0,type:'lamp',solid:false,renderOrder:x+y+.4});
+  rect(13.6,-16.6,.7,.7,'crate');rect(14.4,-16.2,.7,.7,'crate');rect(18.6,-16.8,.7,.7,'crate');
+  [[15,-11.5],[9,-6.5],[24.5,-9.5],[17,-4.0],[5,-13.5],[27.5,-14.5]].forEach(([x,y],i)=>props.push({x,y,w:0,h:0,type:'debris',solid:false,renderOrder:-5,seed:i+1}));
+  for(const [x,y] of [[6,-12.8],[26,-12.8],[6,-7.0],[26,-7.0],[16,-15.6],[16,-10.0],[16,-4.5],[16,-1.2]])props.push({x,y,w:0,h:0,type:'lamp',solid:false,renderOrder:x+y+.4});
   rect(0,world.y0,world.w,.12,'fence',false).renderOrder=-50;rect(0,world.y0,.12,-world.y0,'fence',false).renderOrder=-50;rect(world.w-.12,world.y0,.12,-world.y0,'fence',false).renderOrder=60;
   rebuildBlocks();
   // Explosive barrels: only placed where the floor is actually free.
@@ -446,37 +445,45 @@ function raycast(x,y,a,max){
 // walkable: zombies queue at it and break it down.
 const NAV=.5,NW=64,NH=Math.ceil((world.h-world.y0)/NAV),nav=new Float32Array(NW*NH),navQ=new Int32Array(NW*NH),walkGrid=new Uint8Array(NW*NH);
 let walkDirty=true,navTimer=0;
-function rebuildNav(){
-  if(walkDirty){
-    for(let iy=0;iy<NH;iy++)for(let ix=0;ix<NW;ix++)walkGrid[iy*NW+ix]=collision((ix+.5)*NAV,(iy+.5)*NAV+world.y0,.27,true)?0:1;
-    walkDirty=false;
-  }
-  nav.fill(1e7);let head=0,tail=0;
-  const alive=players.filter(p=>p.hp>0);
-  for(const p of (alive.length?alive:players)){
-    const i=clamp(Math.floor((p.y-world.y0)/NAV),0,NH-1)*NW+clamp(Math.floor(p.x/NAV),0,NW-1);
-    if(nav[i]!==0){nav[i]=0;navQ[tail++]=i}
-  }
+const navB=new Float32Array(NW*NH),walkGridB=new Uint8Array(NW*NH); // wide grid: bosses need ~1.3 tiles of clearance
+function floodNav(field,grid,seeds){
+  field.fill(1e7);let head=0,tail=0;
+  for(const i of seeds)if(field[i]!==0){field[i]=0;navQ[tail++]=i}
   while(head<tail){
-    const k=navQ[head++],x=k%NW,y=(k/NW)|0,d=nav[k]+1;
-    if(x>0&&walkGrid[k-1]&&nav[k-1]>d){nav[k-1]=d;navQ[tail++]=k-1}
-    if(x<NW-1&&walkGrid[k+1]&&nav[k+1]>d){nav[k+1]=d;navQ[tail++]=k+1}
-    if(y>0&&walkGrid[k-NW]&&nav[k-NW]>d){nav[k-NW]=d;navQ[tail++]=k-NW}
-    if(y<NH-1&&walkGrid[k+NW]&&nav[k+NW]>d){nav[k+NW]=d;navQ[tail++]=k+NW}
+    const k=navQ[head++],x=k%NW,y=(k/NW)|0,d=field[k]+1;
+    if(x>0&&grid[k-1]&&field[k-1]>d){field[k-1]=d;navQ[tail++]=k-1}
+    if(x<NW-1&&grid[k+1]&&field[k+1]>d){field[k+1]=d;navQ[tail++]=k+1}
+    if(y>0&&grid[k-NW]&&field[k-NW]>d){field[k-NW]=d;navQ[tail++]=k-NW}
+    if(y<NH-1&&grid[k+NW]&&field[k+NW]>d){field[k+NW]=d;navQ[tail++]=k+NW}
   }
 }
+function rebuildNav(){
+  if(walkDirty){
+    for(let iy=0;iy<NH;iy++)for(let ix=0;ix<NW;ix++){const cx=(ix+.5)*NAV,cy=(iy+.5)*NAV+world.y0;walkGrid[iy*NW+ix]=collision(cx,cy,.27,true)?0:1;walkGridB[iy*NW+ix]=collision(cx,cy,.66,true)?0:1}
+    walkDirty=false;
+  }
+  const alive=players.filter(p=>p.hp>0),seeds=[];
+  for(const p of (alive.length?alive:players))seeds.push(clamp(Math.floor((p.y-world.y0)/NAV),0,NH-1)*NW+clamp(Math.floor(p.x/NAV),0,NW-1));
+  floodNav(nav,walkGrid,seeds);floodNav(navB,walkGridB,seeds);
+}
 const NAV_DIRS=[[0,0],[1,0],[-1,0],[0,1],[0,-1],[1,1],[-1,1],[1,-1],[-1,-1]];
-function navDirection(z,t){
+function dirFrom(field,z,t){
   const x=clamp(Math.floor(z.x/NAV),0,NW-1),y=clamp(Math.floor((z.y-world.y0)/NAV),0,NH-1);
   let bestV=1e8,tx=t.x,ty=t.y;
   for(const [dx,dy] of NAV_DIRS){
     const nx=x+dx,ny=y+dy;if(nx<0||ny<0||nx>=NW||ny>=NH)continue;
-    const v=nav[ny*NW+nx]+(dx&&dy?.25:0)+Math.hypot((nx+.5)*NAV-t.x,((ny+.5)*NAV+world.y0)-t.y)*.003;
-    if(v<bestV){bestV=v;tx=(nx+.5)*NAV;ty=((ny+.5)*NAV+world.y0)}
+    const v=field[ny*NW+nx]+(dx&&dy?.25:0)+Math.hypot((nx+.5)*NAV-t.x,((ny+.5)*NAV+world.y0)-t.y)*.003;
+    if(v<bestV){bestV=v;tx=(nx+.5)*NAV;ty=(ny+.5)*NAV+world.y0}
   }
-  if(bestV>=1e7||nav[y*NW+x]<=1){tx=t.x;ty=t.y}
+  if(bestV>=1e7)return null;
+  if(field[y*NW+x]<=1){tx=t.x;ty=t.y}
   const d=Math.hypot(tx-z.x,ty-z.y)||1;
   return [(tx-z.x)/d,(ty-z.y)/d];
+}
+function navDirection(z,t){
+  const boss=ZT[z.t]&&ZT[z.t].boss,r=boss?(dirFrom(navB,z,t)||dirFrom(nav,z,t)):dirFrom(nav,z,t);
+  if(r)return r;
+  const d=Math.hypot(t.x-z.x,t.y-z.y)||1;return [(t.x-z.x)/d,(t.y-z.y)/d];
 }
 
 // ---------------------------------------------------------------- projection
@@ -708,7 +715,7 @@ const ZT={
   grinch:{i:10,r:.5,hit:.75,hp:12600,dmg:18,reach:1.0,score:750,boss:true,label:'THE GRINCH'}
 };
 const ZNAMES=Object.keys(ZT);
-const GATES=[{x:16,y:-8.6,jx:11},{x:16,y:24.95},{x:1.05,y:13},{x:30.95,y:13}];
+const GATES=[{x:16,y:world.y0+.5,jx:11},{x:16,y:24.95},{x:1.05,y:13},{x:30.95,y:13}];
 const PLAYER_SPEED=2.65,DASH_SPEED=8.6,DASH_TIME=.18,DASH_CD=1.6;
 const REVIVE_TIME=3,INTERMISSION=11;
 
@@ -901,7 +908,7 @@ function spawnZombie(){
   spawnZombieAt(t,x,y);
 }
 function spawnBoss(){
-  const g=pick([{x:16,y:-8.3},{x:16,y:24.65},{x:1.35,y:13},{x:30.65,y:13}]);
+  const g=pick([{x:16,y:world.y0+.7},{x:16,y:24.65},{x:1.35,y:13},{x:30.65,y:13}]);
   const bi=Math.round(wave/5)%3,t=bi===1?'giant':bi===2?'santa':'grinch',n=players.length;
   const hp=Math.round(ZT[t].hp*(1+Math.max(0,wave/5-1)*.18)*(1+.7*(n-1)));
   spawnZombieAt(t,g.x,g.y,{hp,slamCd:3.5,slamWind:0,chargeCd:7,chargeWind:0,charging:0,cvx:0,cvy:0,giftCd:3,elfCd:9,stealCd:5,gooCd:9,stolen:[],enraged:false});
@@ -979,6 +986,18 @@ function grinchBoss(z,t,dist,dt){
     for(const p of players)if(p.hp>0&&Math.hypot(p.x-z.x,p.y-z.y)<4.6){p.dashCd=Math.max(p.dashCd,7);p.dashT=0;hurtPlayer(p,8);say('DASH JAMMED!',p.x,p.y-1.3,'#9bff7a',1.2)}
   }
   return false;
+}
+// A boss that has stopped making progress hops to the nearest roomy tile that is closer to the target.
+function bossUnstick(z){
+  const cx=clamp(Math.floor(z.x/NAV),0,NW-1),cy=clamp(Math.floor((z.y-world.y0)/NAV),0,NH-1),here=navB[cy*NW+cx];
+  let best=null,bv=1e9;
+  for(let dy=-6;dy<=6;dy++)for(let dx=-6;dx<=6;dx++){
+    const nx=cx+dx,ny=cy+dy;if(nx<0||ny<0||nx>=NW||ny>=NH)continue;
+    const v=navB[ny*NW+nx];if(v>=1e7||(here<1e7&&v>=here))continue;
+    const px=(nx+.5)*NAV,py=(ny+.5)*NAV+world.y0;if(collision(px,py,ZT[z.t].r+.05))continue;
+    const sc=v+Math.hypot(dx,dy)*.5;if(sc<bv){bv=sc;best=[px,py]}
+  }
+  if(best){z.x=best[0];z.y=best[1]}
 }
 function updateBoss(z,t,dist,dt){ // returns true when the boss is busy this frame
   if(z.t==='giant'){
@@ -1061,6 +1080,7 @@ function updateZombies(dt){
         if(z.flankTime>0&&dist>2.2){const fx2=ax*.85-ay*z.flank*.35,fy2=ay*.85+ax*z.flank*.35,m=Math.hypot(fx2,fy2)||1;if(!collision(z.x+fx2/m*.6,z.y+fy2/m*.6,.27)){ax=fx2/m;ay=fy2/m}}
       }
       zombieStep(z,ax,ay,z.speed*(z.burn>0&&!def.boss?.85:1),dt);z.stride+=z.speed*dt*5;
+      if(def.boss){z.sT=(z.sT||0)+dt;if(z.sT>=.7){const m=Math.hypot(z.x-(z.sx==null?z.x:z.sx),z.y-(z.sy==null?z.y:z.sy));z.stuck=m<.18?(z.stuck||0)+1:0;z.sx=z.x;z.sy=z.y;z.sT=0;if(z.stuck>=2&&dist>2.2){bossUnstick(z);z.stuck=0}}}
     }
     if(dist<def.reach&&z.attack<=0){z.attack=.8;if(hurtPlayer(t,def.dmg))fx(['shake',6,r2(t.x),r2(t.y)])}
     else if(door.solid&&z.attack<=0){ // break the office door down
@@ -1588,14 +1608,14 @@ function buildFloor(){
   }
   // car park: asphalt, bay lines, lane markings, oil stains and snow drifts
   fpoly([[0,world.y0],[world.w,world.y0],[world.w,.3],[0,.3]],'#3a3f47','#22262c');
-  for(let i=0;i<500;i++){const x=rand(.2,world.w-.2),y=rand(world.y0+.2,0);const q=fproj(x,y);fctx.fillStyle=Math.random()<.5?'#444a52':'#30353b';fctx.fillRect(q.x,q.y,rand(2,6),rand(1,3))}
-  for(const [y0,y1] of [[-8.1,-5.7],[-3.7,-1.3]]){
-    for(let x=1.2;x<=10.9;x+=1.7)fpoly([[x,y0],[x+.06,y0],[x+.06,y1],[x,y1]],'#d9dde0');
-    for(let x=21.3;x<=30.6;x+=1.7)fpoly([[x,y0],[x+.06,y0],[x+.06,y1],[x,y1]],'#d9dde0');
+  for(let i=0;i<1000;i++){const x=rand(.2,world.w-.2),y=rand(world.y0+.2,0);const q=fproj(x,y);fctx.fillStyle=Math.random()<.5?'#444a52':'#30353b';fctx.fillRect(q.x,q.y,rand(2,6),rand(1,3))}
+  for(const [y0,y1] of [[-17.0,-14.4],[-11.2,-8.6],[-5.4,-2.8]]){
+    for(let x=.65;x<=11.1;x+=2.6)fpoly([[x,y0],[x+.06,y0],[x+.06,y1],[x,y1]],'#d9dde0');
+    for(let x=20.85;x<=31.3;x+=2.6)fpoly([[x,y0],[x+.06,y0],[x+.06,y1],[x,y1]],'#d9dde0');
   }
   for(let y=world.y0+.4;y<-.6;y+=1.4)fpoly([[15.92,y],[16.08,y],[16.08,y+.7],[15.92,y+.7]],'#e0b13a');
-  fctx.save();fctx.globalAlpha=.35;for(let i=0;i<9;i++){const q=fproj(rand(1,31),rand(world.y0+.5,-.5));fctx.fillStyle='#0d0f12';fctx.beginPath();fctx.ellipse(q.x,q.y,rand(10,28),rand(5,12),0,0,TAU);fctx.fill()}fctx.restore();
-  fctx.save();fctx.globalAlpha=.7;for(let i=0;i<14;i++){const q=fproj(rand(.4,31.6),rand(world.y0+.2,-.2));fctx.fillStyle='#e9f1f6';fctx.beginPath();fctx.ellipse(q.x,q.y,rand(12,34),rand(5,13),0,0,TAU);fctx.fill()}fctx.restore();
+  fctx.save();fctx.globalAlpha=.35;for(let i=0;i<18;i++){const q=fproj(rand(1,31),rand(world.y0+.5,-.5));fctx.fillStyle='#0d0f12';fctx.beginPath();fctx.ellipse(q.x,q.y,rand(10,28),rand(5,12),0,0,TAU);fctx.fill()}fctx.restore();
+  fctx.save();fctx.globalAlpha=.7;for(let i=0;i<28;i++){const q=fproj(rand(.4,31.6),rand(world.y0+.2,-.2));fctx.fillStyle='#e9f1f6';fctx.beginPath();fctx.ellipse(q.x,q.y,rand(12,34),rand(5,13),0,0,TAU);fctx.fill()}fctx.restore();
   // atrium ring and red carpet runners from the gates
   fctx.save();fctx.globalAlpha=.55;
   for(const [x0,y0,x1,y1] of [[15,1,17,10.1],[15,13,17,25],[1,12,14,14],[22.6,12,31,14]]){
@@ -2283,7 +2303,7 @@ function drawScreenFx(dt){
 
 // ---------------------------------------------------------------- minimap
 let mmBg=null;
-const MMS=2.55,mmp=(x,y)=>[69+(x-y)*MMS,4+(x+y-world.y0)*MMS*.56];
+const MMS=2.25,mmp=(x,y)=>[61+(x-y)*MMS,4+(x+y-world.y0)*MMS*.56];
 function drawMinimap(){
   const cv=$('minimap'),g=cv.getContext('2d');
   if(!mmBg){
