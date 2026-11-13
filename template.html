@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#0b1420">
+<title>Mall of the Dead Online Co-op</title>
+<style>
+/*__CSS__*/
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<div id="hud">
+  <div id="hudTL">
+    <div class="row">
+      <div id="hpBar"><i id="hpGhost"></i><i id="hpFill"></i><b id="hpText">100</b></div>
+      <span class="pill" id="waveP">WAVE 1</span>
+      <span class="pill" id="scoreP">0</span>
+      <span class="pill" id="comboP"></span>
+    </div>
+    <div class="row" id="buffs"></div>
+    <div id="team"></div>
+  </div>
+  <div id="topRight">
+    <div class="row">
+      <span class="pill" id="pingP"></span>
+      <button id="muteBtn" type="button" title="Mute (M)">🔊</button>
+      <button id="fsBtn" type="button" title="Fullscreen">⛶</button>
+      <button id="pause" type="button" title="Pause (Esc)">Ⅱ</button>
+    </div>
+    <canvas id="minimap" width="176" height="104"></canvas>
+  </div>
+  <div id="bossWrap"><span id="bossName">GIANT</span><div id="bossBar"><i id="bossFill"></i></div></div>
+  <div id="weaponBar">
+    <div id="slots"></div>
+    <div id="ammoBig">40</div>
+    <div id="subInfo"></div>
+  </div>
+  <div id="perks"></div>
+</div>
+
+<div id="touch">
+  <div class="stick" id="stickL"><div class="nub"></div></div>
+  <div class="stick" id="stickR"><div class="nub"></div></div>
+  <button class="tbtn" id="tDash" type="button">DASH</button>
+  <button class="tbtn" id="tNade" type="button">NADE</button>
+  <button class="tbtn" id="tReload" type="button">RELOAD</button>
+  <button class="tbtn" id="tSwap" type="button">GUN</button>
+  <button class="tbtn" id="tAct" type="button">USE</button>
+</div>
+
+<div id="help">WASD move · Mouse aim · Click shoot · R reload · Q / wheel / 1-6 guns · G or right-click grenade · Shift / Space dash · E use / hold to revive · Esc pause</div>
+
+<div id="overlay">
+  <div id="panel">
+    <!-- MAIN -->
+    <div class="scr" id="scrMain">
+      <h1>MALL OF THE DEAD <small id="ver">V41</small></h1>
+      <p class="tag">CHRISTMAS AT THE MALL. The power is out, the doors are open and the horde is coming for the tree.</p>
+      <div class="chars" id="characters" aria-label="Choose your survivor"></div>
+      <input id="playerName" placeholder="Your name" maxlength="16" autocomplete="off">
+      <button class="big" id="start" type="button">START SOLO SURVIVAL</button>
+      <div class="btnRow">
+        <button id="createRoom" type="button">HOST ONLINE ROOM</button>
+        <button id="joinRoom" type="button">JOIN ROOM</button>
+      </div>
+      <div id="joinBox">
+        <input id="roomEntry" placeholder="ROOM CODE" maxlength="6" autocomplete="off" autocapitalize="characters">
+        <button id="connectJoin" type="button">JOIN</button>
+      </div>
+      <div id="mainStatus" class="status"></div>
+      <div class="btnRow small">
+        <button id="howBtn" type="button">HOW TO PLAY</button>
+        <button id="setBtn" type="button">SETTINGS</button>
+      </div>
+      <div id="bestLine" class="best"></div>
+    </div>
+    <!-- LOBBY -->
+    <div class="scr" id="scrLobby">
+      <h2>CO-OP LOBBY</h2>
+      <div id="roomCode"></div>
+      <button id="copyLink" type="button">COPY INVITE LINK</button>
+      <div id="netStatus" class="status"></div>
+      <div id="roomRoster"></div>
+      <div class="chars" id="onlineCharacters"></div>
+      <div class="btnRow">
+        <button id="readyBtn" type="button">READY</button>
+        <button class="big" id="hostStart" type="button">START CO-OP</button>
+      </div>
+      <button id="leaveRoom" type="button">LEAVE ROOM</button>
+    </div>
+    <!-- HOW -->
+    <div class="scr" id="scrHow">
+      <h2>HOW TO PLAY</h2>
+      <div class="how">
+        <p><b>Survive the waves.</b> Zombies pour in through the four gates. Every 5th wave is a boss: the Giant, then Zombie Santa.</p>
+        <p><b>PC:</b> WASD move · mouse aim · click shoot · R reload · Q, wheel or 1-6 switch guns · G / right-click grenade · Shift or Space dash · E use doors and the radio, hold E next to a downed friend to revive.</p>
+        <p><b>Phone:</b> left thumb anywhere to move, right thumb anywhere to aim and fire. Buttons for dash, grenade, reload, gun and use.</p>
+        <p><b>Gamepad:</b> sticks move and aim · RT fire · A dash · RB grenade · X reload · Y gun · B use.</p>
+        <p><b>Loot:</b> kill the glowing crate carriers to unlock new guns for the whole team. Zombies sometimes drop power-ups.</p>
+        <p><b>Perks:</b> after each wave pick 1 of 3 perks (keys 1-3 or tap).</p>
+        <p><b>Watch for:</b> crawlers (small, fast), bloaters (explode), spitters (acid), riot zombies (shielded from the front), red barrels (shoot them).</p>
+        <p><b>Nick's Office:</b> close the door with E for a breather. They will break it down.</p>
+      </div>
+      <button class="back" type="button">BACK</button>
+    </div>
+    <!-- SETTINGS -->
+    <div class="scr" id="scrSettings">
+      <h2>SETTINGS</h2>
+      <label class="set">Volume <input id="volRange" type="range" min="0" max="100" value="80"></label>
+      <label class="set">Screen shake <input id="shakeChk" type="checkbox" checked></label>
+      <label class="set">Dynamic lighting <input id="lightChk" type="checkbox" checked></label>
+      <label class="set">Auto-fire when aimed at a zombie (touch) <input id="autoChk" type="checkbox"></label>
+      <label class="set" id="waveTestLabel">TEST MODE: start at wave <input id="waveTest" type="number" min="1" max="100" value="1" inputmode="numeric"></label>
+      <button class="back" type="button">BACK</button>
+    </div>
+    <!-- PAUSE -->
+    <div class="scr" id="scrPause">
+      <h2 id="pauseTitle">PAUSED</h2>
+      <p id="pauseDesc">Take a break. Your survival run is waiting.</p>
+      <button class="big" id="resumeBtn" type="button">RESUME</button>
+      <div class="btnRow small">
+        <button id="pauseSet" type="button">SETTINGS</button>
+        <button id="quitBtn" type="button">QUIT TO MENU</button>
+      </div>
+    </div>
+    <!-- GAME OVER -->
+    <div class="scr" id="scrOver">
+      <h1 id="overTitle">YOU WERE OVERRUN</h1>
+      <div id="overStats"></div>
+      <div id="overBest" class="best"></div>
+      <button class="big" id="againBtn" type="button">PLAY AGAIN</button>
+      <button id="overMenu" type="button">MAIN MENU</button>
+    </div>
+    <!-- DISCONNECT -->
+    <div class="scr" id="scrDrop">
+      <h2>DISCONNECTED</h2>
+      <p id="dropDesc">Server connection lost.</p>
+      <button class="big" id="rejoinBtn" type="button">REJOIN ROOM</button>
+      <button id="dropMenu" type="button">MAIN MENU</button>
+    </div>
+  </div>
+</div>
+<div id="toast"></div>
+<script>window.MOTD_ASSETS=/*__ASSETS__*/;</script>
+<script>
+(()=>{
+/*__JS__*/
+})();
+</script>
+</body>
+</html>
