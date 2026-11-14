@@ -765,7 +765,7 @@ const GUNS=[
   {name:'AR',clip:40,rate:.095,dmg:22,speed:22,spread:.06,reload:1.45,pellets:1,pen:1,life:.9,kb:.5,len:30,unlock:0},
   {name:'LMG',clip:120,rate:.075,dmg:22,speed:22,spread:.07,reload:2.9,pellets:1,pen:1,life:.9,kb:.5,len:44,unlock:2},
   {name:'SHOTGUN',clip:8,rate:.32,dmg:30,speed:18,spread:.17,reload:2.1,pellets:9,pen:3,life:.34,kb:1.5,len:30,unlock:3},
-  {name:'RPG',clip:1,rate:1,dmg:480,speed:11,spread:.01,reload:3.4,pellets:1,pen:1,life:1.8,kb:0,len:40,unlock:6,boom:4.4},
+  {name:'RPG',clip:1,rate:1,dmg:270,speed:11,spread:.01,reload:6.5,pellets:1,pen:1,life:1.8,kb:0,len:40,unlock:6,boom:3.2},
   {name:'FLAMER',clip:90,rate:.04,dmg:6,speed:9.5,spread:.2,reload:2.4,pellets:1,pen:99,life:.45,kb:0,len:30,unlock:8,flame:true},
   {name:'RAILGUN',clip:5,rate:.85,dmg:300,speed:70,spread:0,reload:2.3,pellets:1,pen:14,life:.4,kb:2.2,len:46,unlock:11,rail:true}
 ];
@@ -955,7 +955,7 @@ function explode(b){
   fx(['boom',r2(b.x),r2(b.y),b.r,b.kind||0]);
   if(b.dmg>0)for(const z of zombies){
     if(z.dead)continue;const d=Math.hypot(z.x-b.x,z.y-b.y);
-    if(d<b.r+ZT[z.t].r)damageZombie(z,b.dmg*(1-.55*Math.min(1,d/b.r)),b.o,{blast:true,dir:[z.x-b.x,z.y-b.y],kb:3});
+    if(d<b.r+ZT[z.t].r)damageZombie(z,b.dmg*(1-.55*Math.min(1,d/b.r))*(b.kind===5&&ZT[z.t].boss?.6:1),b.o,{blast:true,dir:[z.x-b.x,z.y-b.y],kb:3});
   }
   if(b.hurt)for(const p of players){
     const d=Math.hypot(p.x-b.x,p.y-b.y);
