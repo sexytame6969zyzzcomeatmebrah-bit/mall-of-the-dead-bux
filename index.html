@@ -159,6 +159,8 @@ p{color:#d5e0e9;line-height:1.45;margin:8px 0;font-size:13px}
 #scrTitle .titleGap{flex:1}
 #scrTitle .tag{letter-spacing:.35em;color:#9fb0bd;text-shadow:0 2px 8px #000}
 #enterBtn{width:min(340px,80vw);letter-spacing:.3em}
+#overlay.scene{background:none}
+#overlay.scene #panel:not(.title){backdrop-filter:none;background:#0f1a28d6}
 
 </style>
 </head>
@@ -2780,7 +2782,8 @@ const myName=()=>($('playerName').value.trim()||'Survivor').slice(0,16);
 function showScreen(id){
   curScreen=id;for(const el of document.querySelectorAll('.scr'))el.classList.toggle('on',el.id===id);
   $('overlay').style.display='flex';$('panel').classList.toggle('title',id==='scrTitle');$('overlay').classList.toggle('title',id==='scrTitle');
-  if(id==='scrTitle')titleSetup();else if(titleOn)titleOff();
+  if(state==='menu'){if(!titleOn)titleSetup()}else if(titleOn)titleOff(); // the same dark scene sits behind every menu
+  $('overlay').classList.toggle('scene',titleOn);
   const inGame=state==='playing'||state==='paused';
   $('hud').style.display=inGame?'block':'none';$('touch').classList.toggle('on',false);
 }
@@ -2800,7 +2803,7 @@ function buildChars(root,selected,onPick,taken){
     b.onclick=()=>{sfx('click');previewVoice(i);onPick(i)};root.appendChild(b);drawCharacterPreview(cv,c);
   });
 }
-function mainChars(){buildChars($('characters'),chosenCharacter,i=>{chosenCharacter=i;store.set('char',i);mainChars()})}
+function mainChars(){buildChars($('characters'),chosenCharacter,i=>{chosenCharacter=i;store.set('char',i);if(titleOn&&players[0])players[0].character=i;mainChars()})}
 
 // ---------------------------------------------------------------- flow
 function enterGame(){
