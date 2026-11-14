@@ -236,7 +236,7 @@ p{color:#d5e0e9;line-height:1.45;margin:8px 0;font-size:13px}
     </div>
     <!-- MAIN -->
     <div class="scr" id="scrMain">
-      <h1>MALL OF THE DEAD <small id="ver">V55</small></h1>
+      <h1>MALL OF THE DEAD <small id="ver">V56</small></h1>
       <p class="tag">CHRISTMAS AT THE MALL. The power is out, the doors are open and the horde is coming for the tree.</p>
       <div class="chars" id="characters" aria-label="Choose your survivor"></div>
       <input id="playerName" placeholder="Write your name" maxlength="16" autocomplete="off">
@@ -1711,7 +1711,7 @@ function updateBullets(dt){
         b.hit.push(z.id);
         if(b.k===2){boomQueue.push({x:b.x,y:b.y,r:GUNS[3].boom,dmg:b.dmg,o:b.o,t:0,kind:5});gone=true;break}
         if(b.k===1){z.burn=2.6;z.burnDps=Math.max(z.burnDps,16*(b.dmg/GUNS[4].dmg));z.burnBy=b.o;damageZombie(z,b.dmg,b.o,{quiet:true});continue}
-        if(b.k===4){if(Math.random()<.3||z.hp-b.dmg<=0)fx(['blood',r2(z.x),r2(z.y),z.hp-b.dmg<=0?1:0]);damageZombie(z,b.dmg,b.o,{dir:[b.vx,b.vy],kb:GUNS[b.w].kb,quiet:true});continue}
+        if(b.k===4){if(Math.random()<.55||z.hp-b.dmg<=0)fx(['blood',r2(z.x),r2(z.y),z.hp-b.dmg<=0?1:0,1]);damageZombie(z,b.dmg,b.o,{dir:[b.vx,b.vy],kb:GUNS[b.w].kb,quiet:true});continue}
         fx(['blood',r2(z.x),r2(z.y),z.hp-b.dmg<=0?1:0]);
         damageZombie(z,b.dmg,b.o,{dir:[b.vx,b.vy],kb:GUNS[b.w].kb,canCrit:true});
         if(--b.pen<=0){gone=true;break}
@@ -2359,9 +2359,8 @@ function playFx(ev){
       if(fxFromNet&&ev[1]===netId)break;
       const [,pid,w,x,y,a]=ev,g=GUNS[w],p=playerById(pid),mx=x+Math.cos(a)*.85,my=y+Math.sin(a)*.85;
       if(p)p.flash=.06;
-      flashes.push({x:mx,y:my,z:.6,r:g.flame?1.7:g.saw?2.2:g.boom?4.4:2.7,life:.07,max:.07,c:g.flame?'#ff9a3c':'#ffd79a'});
-      if(g.saw)burst(mx,my,3,['#ffd35a','#ff9a3c','#8a8a8a'],3,.25,3);
-      if(!g.flame&&!g.saw&&!g.boom){const sa=a+Math.PI/2*(Math.random()<.5?1:-1);addP({x,y,z:.62,vx:Math.cos(sa)*rand(.8,1.6),vy:Math.sin(sa)*rand(.8,1.6),vz:rand(1.6,2.6),g:9,life:.55,max:.55,color:w===2?'#c0392b':'#d8b45a',size:w===2?4:3,k:0})}
+      if(g.saw){if(p)p.sawUntil=clock+.4}else flashes.push({x:mx,y:my,z:.6,r:g.flame?1.7:g.boom?4.4:2.7,life:.07,max:.07,c:g.flame?'#ff9a3c':'#ffd79a'});
+            if(!g.flame&&!g.saw&&!g.boom){const sa=a+Math.PI/2*(Math.random()<.5?1:-1);addP({x,y,z:.62,vx:Math.cos(sa)*rand(.8,1.6),vy:Math.sin(sa)*rand(.8,1.6),vz:rand(1.6,2.6),g:9,life:.55,max:.55,color:w===2?'#c0392b':'#d8b45a',size:w===2?4:3,k:0})}
       if(g.boom){smoke(mx,my,6,.25);smoke(x-Math.cos(a)*.9,y-Math.sin(a)*.9,6,.45);burst(x-Math.cos(a)*.7,y-Math.sin(a)*.7,10,['#ffd35a','#ff9a3c','#8a8a8a'],5,.35,4)}
       if(w===6)miniFire(x,y);else sfx('gun'+w,x,y);
       if(p===me){addShake(w===6?.9:w===2?4.5:w===5?1.2:w===3?9:w===4?.6:1.6);if(COARSE&&navigator.vibrate&&w!==4&&w!==1&&w!==0)navigator.vibrate(12)}
@@ -2371,7 +2370,11 @@ function playFx(ev){
       if(texts.length<60)texts.push({text:String(ev[3]),x:ev[1]+rand(-.25,.25),y:ev[2]+rand(-.25,.25),z:1.25,life:.55,max:.55,color:ev[4]?'#ffe14d':'#ffffff',size:ev[4]?18:11,small:true});
       break;
     case 'blood':{
-      const dead=ev[3];burst(ev[1],ev[2],dead?9:4,['#8f151c','#cf3038','#cf3038'],dead?4.4:3,.45,5);
+      const dead=ev[3];
+      if(ev[4]){ // chainsaw: a spray of blood and a wide splatter on the ground
+        burst(ev[1],ev[2],dead?16:9,['#8f151c','#b3202a','#cf3038','#e24a52'],5.5,.6,6,.6);
+        stampBlood(ev[1],ev[2],dead?7:3,dead?.9:.55,dead?.24:.15);if(Math.random()<.25)sfx('squish',ev[1],ev[2]);break}
+      burst(ev[1],ev[2],dead?9:4,['#8f151c','#cf3038','#cf3038'],dead?4.4:3,.45,5);
       stampBlood(ev[1],ev[2],dead?4:1,dead?.5:.28,dead?.17:.1);sfx('hit',ev[1],ev[2]);break}
     case 'die':{
       const t=ZNAMES[ev[1]],boss=ZT[t].boss;
@@ -2733,6 +2736,7 @@ function drawCharacterPreview(cv,c){
   g.fillStyle=c.skin;g.fillRect(-13,-27,5,16);g.fillRect(8,-27,5,16);drawCharacterDetails(g,c,0)}
   g.restore();
 }
+let sawSpin=false;
 function drawGun(w,hand,reloading,progress){
   const g=GUNS[w];
   ctx.fillStyle=hand;ctx.fillRect(3,-7,12,5);ctx.fillRect(3,4,12,5);
@@ -2746,8 +2750,16 @@ function drawGun(w,hand,reloading,progress){
   else if(w===5){ // chainsaw: orange engine housing, rear handle, long bar with a running chain
     ctx.fillStyle='#d8651f';ctx.fillRect(-2,-7,18,13);ctx.fillStyle='#1b1e22';ctx.fillRect(-9,-4,8,7);ctx.fillRect(2,-9,6,3);
     ctx.fillStyle='#9aa1a8';ctx.fillRect(16,-3.5,32,7);ctx.fillStyle='#2a2d31';
-    const ph=(clock*70)%4;for(let x=16+ph;x<48;x+=4)ctx.fillRect(x,-4.5,1.6,2);for(let x=16+ph;x<48;x+=4)ctx.fillRect(x,2.6,1.6,2);
-    ctx.fillStyle='#ffb04a';ctx.fillRect(6,-6,6,2)}
+    const ph=(clock*(sawSpin?240:40))%4;for(let x=16+ph;x<48;x+=4)ctx.fillRect(x,-4.5,1.6,2);for(let x=16+ph;x<48;x+=4)ctx.fillRect(x,2.6,1.6,2);
+    ctx.fillStyle='#ffb04a';ctx.fillRect(6,-6,6,2);
+    if(sawSpin){ // whirling blade: a blurred spinning disc of teeth at the end of the bar, with a swept trail
+      ctx.save();ctx.translate(46,0);
+      ctx.globalAlpha=.35;ctx.fillStyle='#d8dde0';ctx.beginPath();ctx.arc(0,0,12,0,TAU);ctx.fill();
+      ctx.globalAlpha=.9;ctx.strokeStyle='#f2f4f5';ctx.lineWidth=2;const a0=clock*55;
+      for(let i=0;i<4;i++){const a=a0+i*Math.PI/2;ctx.beginPath();ctx.moveTo(Math.cos(a)*3,Math.sin(a)*3);ctx.lineTo(Math.cos(a)*12,Math.sin(a)*12);ctx.stroke()}
+      ctx.globalAlpha=.5;ctx.strokeStyle='#ffffff';ctx.lineWidth=2.5;ctx.beginPath();ctx.arc(0,0,10,a0,a0+2.2);ctx.stroke();
+      ctx.restore();
+    }}
   else{
     ctx.fillStyle=w===2?'#50301c':'#202a33';ctx.fillRect(4,-4,w===1?35:30,8);
     ctx.fillStyle=w===2?'#5e6162':'#5b666b';ctx.fillRect(w===1?30:25,-3,w===1?25:15,w===1?6:5);
@@ -2782,7 +2794,7 @@ function drawSurvivor(p){
     // both hands and the weapon, in the exact projected firing direction
     ctx.save();ctx.translate(0,-23+bob+(reloading?7:0));ctx.rotate(screenAngle(p.angle)+(reloading?-.85:0));
     if(p.flash>0)ctx.translate(-3,0);
-    drawGun(p.weapon,c.hand||c.skin,reloading,progress);ctx.restore();
+    sawSpin=p.weapon===5&&p.sawUntil>clock;drawGun(p.weapon,c.hand||c.skin,reloading,progress);ctx.restore();
   }
   ctx.restore();
   if(reloading){ctx.strokeStyle='#1c303b';ctx.lineWidth=5;ctx.beginPath();ctx.arc(pos.x,pos.y-56,14,0,TAU);ctx.stroke();ctx.strokeStyle='#f6c96b';ctx.beginPath();ctx.arc(pos.x,pos.y-56,14,-Math.PI/2,-Math.PI/2+TAU*progress);ctx.stroke()}
@@ -3079,7 +3091,7 @@ function draw(dt){
     ctx.globalAlpha=a*.7;ctx.fillStyle=p.color;ctx.beginPath();ctx.arc(q.x,q.y,p.size*(.4+a*.6),0,TAU);ctx.fill();
   }
   for(const p of players){ // muzzle flash
-    if(p.flash<=0||p.hp<=0||GUNS[p.weapon].flame)continue;
+    if(p.flash<=0||p.hp<=0||GUNS[p.weapon].flame||GUNS[p.weapon].saw)continue;
     const base=project(p.x,p.y),a=screenAngle(p.angle),L=GUNS[p.weapon].len+8,mx=base.x+Math.cos(a)*L,my=base.y-23+Math.sin(a)*L;
     ctx.globalAlpha=1;ctx.fillStyle='#fff1b8';ctx.beginPath();ctx.arc(mx,my,p.weapon===2?13:8,0,TAU);ctx.fill();
     ctx.globalAlpha=.6;ctx.fillStyle='#ffb347';ctx.beginPath();ctx.arc(mx+Math.cos(a)*8,my+Math.sin(a)*8,p.weapon===2?9:5,0,TAU);ctx.fill();
@@ -4402,7 +4414,7 @@ try{
 addEventListener('resize',resize);
 if(window.visualViewport)visualViewport.addEventListener('resize',resize);
 resize();build();buildFloor();mainChars();
-$('ver').textContent='V55';$('bestLine').textContent=bestLine();
+$('ver').textContent='V56';$('bestLine').textContent=bestLine();
 showScreen(QUERY.get('room')?'scrMain':'scrTitle');
 if(location.protocol==='file:')setStatus('Solo works from this file. Online co-op needs the server (npm start).');
 const inviteCode=(QUERY.get('room')||'').toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,6);
