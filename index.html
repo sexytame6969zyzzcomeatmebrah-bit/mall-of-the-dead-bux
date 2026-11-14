@@ -323,7 +323,8 @@ const characters=[
   {name:'Scary Terry',skin:'#b45b9d',shirt:'#7ca653',hair:'#6e346c',pants:'#36323f',scaryTerry:true,color:'#d07fd0'},
   {name:'AJ',skin:'#e9b99b',shirt:'#598d63',hair:'#25232a',pants:'#3f4c57',color:'#7fdc97'},
   {name:'Pickle Rick',skin:'#4cae3a',shirt:'#4cae3a',hair:'#4cae3a',pants:'#3d962f',color:'#8bd84a',pickle:true,hand:'#4cae3a'},
-  {name:'Iron Mike',skin:'#8a5a3c',shirt:'#8a5a3c',hair:'#8a5a3c',pants:'#14161a',color:'#e5484d',boxer:true,hand:'#c8252b'}
+  {name:'Iron Mike',skin:'#8a5a3c',shirt:'#8a5a3c',hair:'#8a5a3c',pants:'#14161a',color:'#e5484d',boxer:true,hand:'#c8252b'},
+  {name:'Tony Montana',skin:'#d3a07c',shirt:'#f4f1ea',hair:'#16120f',pants:'#ebe8e0',color:'#f4f1ea',scarface:true}
 ];
 
 // ---------------------------------------------------------------- map
@@ -515,7 +516,7 @@ const worldAngle=(sx,sy)=>Math.atan2(sy/ISOY-sx/ISOX,sy/ISOY+sx/ISOX);
 // ============================================================================
 const AU={ctx:null,master:null,dry:null,verb:null,noise:null,bufs:{},last:{},muted:false};
 const VOICE_CLIPS=['damage','streak','ajStreak','tyroneStreak','tyroneDamage','ajDamage','terryDamage','terryStreak','pickleStreak','pickleDamage','ironMikeStreak','ironMikeDamage'];
-const CHAR_VOICE=[{damage:'damage',streak:'streak'},{damage:'tyroneDamage',streak:'tyroneStreak'},{damage:'terryDamage',streak:'terryStreak'},{damage:'ajDamage',streak:'ajStreak'},{damage:'pickleDamage',streak:'pickleStreak',gain:.64},{synth:'boxer',streak:'ironMikeStreak',damage:'ironMikeDamage'}];
+const CHAR_VOICE=[{damage:'damage',streak:'streak'},{damage:'tyroneDamage',streak:'tyroneStreak'},{damage:'terryDamage',streak:'terryStreak'},{damage:'ajDamage',streak:'ajStreak'},{damage:'pickleDamage',streak:'pickleStreak',gain:.64},{synth:'boxer',streak:'ironMikeStreak',damage:'ironMikeDamage'},{synth:'boxer'}];
 function masterVol(){return AU.muted?0:settings.vol*.6}
 function initAudio(){
   try{
@@ -2018,6 +2019,14 @@ function drawCharacterDetails(g,c,bob){
   if(c.beanie){g.fillStyle='#27292f';g.beginPath();g.ellipse(0,-44+bob,10,8,0,Math.PI,TAU);g.fill();g.fillStyle='#444954';g.fillRect(-10,-45+bob,20,4)}
   if(c.belly){g.fillStyle=c.shirt;g.beginPath();g.ellipse(0,-17+bob,12,9,0,0,TAU);g.fill()}
   if(c.scaryTerry)drawScaryTerry(g,bob);
+  if(c.scarface){ // white suit: open collar showing a pink shirt, gold chain, slicked hair, moustache
+    g.fillStyle='#e8749a';g.beginPath();g.moveTo(-4,-31+bob);g.lineTo(4,-31+bob);g.lineTo(0,-20+bob);g.fill();
+    g.fillStyle='#fffdf6';g.beginPath();g.moveTo(-9,-31+bob);g.lineTo(-3,-31+bob);g.lineTo(-1,-23+bob);g.lineTo(-6,-27+bob);g.fill();g.beginPath();g.moveTo(9,-31+bob);g.lineTo(3,-31+bob);g.lineTo(1,-23+bob);g.lineTo(6,-27+bob);g.fill();
+    g.strokeStyle='#e0b13a';g.lineWidth=1.2;g.beginPath();g.moveTo(-3,-30+bob);g.quadraticCurveTo(0,-24+bob,3,-30+bob);g.stroke();
+    g.fillStyle='#cfcabd';g.fillRect(-10,-13+bob,20,1.2);
+    g.fillStyle=c.hair;g.beginPath();g.ellipse(0,-41+bob,9.6,6,0,Math.PI,TAU);g.fill();g.fillRect(-9,-42+bob,2.5,5);g.fillRect(6.5,-42+bob,2.5,5);
+    g.fillRect(-4,-33.5+bob,8,2);
+  }
 }
 function drawCharacterPreview(cv,c){
   const g=cv.getContext('2d');g.clearRect(0,0,cv.width,cv.height);g.save();g.translate(cv.width/2,75);const s=c.scaryTerry||c.pickle?1.35:1.6;g.scale(s,s);
