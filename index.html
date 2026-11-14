@@ -136,6 +136,18 @@ p{color:#d5e0e9;line-height:1.45;margin:8px 0;font-size:13px}
   .perk{padding:7px 4px}
 }
 
+#scoreboard{display:none;position:fixed;left:50%;top:14%;transform:translateX(-50%);z-index:30;min-width:360px;max-width:92vw;background:#0b1420ea;border:1px solid #ffffff3a;border-radius:12px;padding:12px 16px 8px;box-shadow:0 10px 40px #000a;pointer-events:none}
+#scoreboard .sbTitle{font-weight:900;letter-spacing:.12em;font-size:13px;color:#ffd47a;text-align:center;margin-bottom:6px}
+#scoreboard table{width:100%;border-collapse:collapse;font-size:14px;font-weight:800}
+#scoreboard th{font-size:11px;color:#9fb3c8;text-align:right;padding:3px 8px;letter-spacing:.08em}
+#scoreboard th:first-child,#scoreboard td:first-child{text-align:left}
+#scoreboard td{padding:5px 8px;text-align:right;border-top:1px solid #ffffff14;font-variant-numeric:tabular-nums}
+#scoreboard tr.me td{background:#ffffff12}
+#scoreboard tr.down td:first-child{opacity:.55}
+#scoreboard .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:8px}
+#scoreboard .tag{font-size:10px;color:#ffd47a;margin-left:6px}
+#scoreboard .sbHint{text-align:center;font-size:10px;color:#7f93a8;margin-top:6px}
+
 </style>
 </head>
 <body>
@@ -152,6 +164,7 @@ p{color:#d5e0e9;line-height:1.45;margin:8px 0;font-size:13px}
     <div class="row" id="buffs"></div>
     <div id="team"></div>
   </div>
+  <div id="scoreboard"><div class="sbTitle">SURVIVORS</div><table><thead><tr><th>PLAYER</th><th>KILLS</th><th>DEATHS</th><th>PING</th></tr></thead><tbody id="sbBody"></tbody></table><div class="sbHint">Hold TAB</div></div>
   <div id="topRight">
     <div class="row">
       <span class="pill" id="pingP"></span>
@@ -767,7 +780,7 @@ function fx(ev){playFx(ev);if(netPlaying&&netHost)outEvents.push(ev)}
 const say=(text,x,y,color,life=1,size=18)=>fx(['txt',text,r2(x),r2(y),color,life,size]);
 
 function makePlayer(id,character,name,slot=0){
-  return {id,character:character||0,name:name||'Survivor',slot,x:16+slot*.55,y:14+slot*.45,angle:0,hp:100,maxHp:100,weapon:0,
+  return {id,character:character||0,name:name||'Survivor',slot,deaths:0,ping:0,x:16+slot*.55,y:14+slot*.45,angle:0,hp:100,maxHp:100,weapon:0,
     ammo:GUNS.map(g=>g.clip),reload:0,reloadTotal:0,reloadStage:0,cool:0,pcool:0,invuln:0,knockdown:0,downed:false,reviveProgress:0,
     magKills:0,shouted:false,shoutTimer:0,damageVoicePlayed:false,dashT:0,dashCd:0,dvx:0,dvy:0,grenades:2,nadeCd:0,gunLock:0,
     perks:{},offer:null,kills:0,score:0,combo:0,comboT:0,lastHit:-99,tp:0,stride:0,moving:false,flash:0,hurtT:0,
@@ -850,7 +863,7 @@ function hurtPlayer(p,amount,opt={}){
   fx(['hurt',p.id,Math.round(amount)]);
   if(before>p.maxHp*.5&&p.hp<=p.maxHp*.5&&p.hp>0&&!p.damageVoicePlayed){p.damageVoicePlayed=true;fx(['voice',p.id,'damage']);say('CRITICAL!',p.x,p.y-1.5,'#ff7878',1.3)}
   if(p.hp<=0){
-    p.downed=true;p.reviveProgress=0;p.reload=0;p.combo=0;
+    p.downed=true;p.deaths=(p.deaths||0)+1;p.reviveProgress=0;p.reload=0;p.combo=0;
     fx(['down',p.id]);
     if(isMulti())say(p.name+' IS DOWN!',p.x,p.y-1.6,'#ff6b6b',2.2);
   }
@@ -1445,7 +1458,7 @@ function beginNet(msg){
 function applyInput(id,inp){
   const p=playerById(id);if(!p||!Array.isArray(inp))return;
   const x=+inp[0],y=+inp[1],a=+inp[2];
-  p.input.fire=!!inp[3];p.input.revive=!!inp[4];
+  p.input.fire=!!inp[3];p.input.revive=!!inp[4];if(Number.isFinite(+inp[6]))p.ping=clamp(Math.round(+inp[6]),0,9999);
   if(Number.isFinite(a))p.angle=a;
   if(p.hp>0&&p.knockdown<=0&&inp[5]===p.tp&&Number.isFinite(x)&&Number.isFinite(y)){
     const d=Math.hypot(x-p.x,y-p.y);
@@ -1476,7 +1489,7 @@ function packSnap(){
   const s={t:r2(time),w:wave,k:kills,sc:teamScore,sl:spawnLeft,ws:waveSize,im:r2(intermission),st:state==='over'?1:0,ow:teamOwned,
     bf:[r2(buffs.dmg),r2(buffs.rapid)],d:officeDoor.solid?1:0,r:radioOn?1:0,br:mask,
     P:players.map(p=>[p.id,r2(p.x),r2(p.y),r2(p.angle),Math.ceil(p.hp),p.maxHp,p.weapon,p.ammo[p.weapon],r2(p.reload),r2(p.reloadTotal),r2(p.knockdown),
-      p.hp<=0?1:0,r2(p.reviveProgress),p.grenades,p.kills,p.score,p.combo,p.perks,p.offer,p.tp,r2(p.dashCd),p.character,p.shoutTimer>0?1:0,p.invuln>0?1:0,p.name,p.gunLock||0]),
+      p.hp<=0?1:0,r2(p.reviveProgress),p.grenades,p.kills,p.score,p.combo,p.perks,p.offer,p.tp,r2(p.dashCd),p.character,p.shoutTimer>0?1:0,p.invuln>0?1:0,p.name,p.gunLock||0,p.deaths||0,p===me?netPing:(p.ping||0)]),
     Z:zombies.map(z=>[z.id,ZT[z.t].i,r2(z.x),r2(z.y),r2(z.angle),Math.ceil(z.hp),z.maxHp,zFlags(z)]),
     B:bullets.map(b=>[r2(b.x),r2(b.y),r2(b.vx),r2(b.vy),r2(b.life),b.k]),
     E:eprojs.map(e=>[r2(e.x),r2(e.y),r2(e.vx),r2(e.vy)]),
@@ -1518,7 +1531,7 @@ function applySnap(s){
     if(p.weapon!==a[6]){p.weapon=a[6];p.reloadStage=0}
     p.ammo[a[6]]=a[7];p.reload=a[8];p.reloadTotal=a[9];p.knockdown=a[10];p.downed=!!a[11];p.reviveProgress=a[12];
     p.grenades=a[13];p.kills=a[14];p.score=a[15];p.combo=a[16];p.perks=a[17]||{};p.offer=a[18];
-    p.character=a[21];p.shoutTimer=a[22]?1:0;p.invuln=a[23]?.2:0;p.name=a[24];p.gunLock=a[25]|0;
+    p.character=a[21];p.shoutTimer=a[22]?1:0;p.invuln=a[23]?.2:0;p.name=a[24];p.gunLock=a[25]|0;p.deaths=a[26]|0;p.ping=a[27]|0;
   }
   players=players.filter(p=>p===me||seen.has(p.id));
   // zombies
@@ -1562,7 +1575,7 @@ function clientFrame(dt){
   netInputTimer-=dt;
   if(netInputTimer<=0){
     netInputTimer=1/30;
-    netSend({t:'input',input:[r2(me.x),r2(me.y),r2(me.angle),me.input.fire?1:0,me.input.revive?1:0,me.tp]});
+    netSend({t:'input',input:[r2(me.x),r2(me.y),r2(me.angle),me.input.fire?1:0,me.input.revive?1:0,me.tp,netPing]});
   }
 }
 function netTick(dt){
@@ -2744,7 +2757,19 @@ function pollPad(){
 let hudKey={},hudTimer=0;
 function setHTML(id,html){if(hudKey[id]!==html){hudKey[id]=html;$(id).innerHTML=html}}
 function setText(id,t){if(hudKey[id]!==t){hudKey[id]=t;$(id).textContent=t}}
+function updateScoreboard(){
+  const el=$('scoreboard'),show=!!keys['tab']&&state==='playing'&&!!me;
+  if(el.style.display!==(show?'block':'none'))el.style.display=show?'block':'none';
+  if(!show)return;
+  const ping=p=>p===me?netPing:(p.ping||0),col=v=>v<80?'#7fe08a':v<150?'#ffd24a':'#ff6b6b';
+  const rows=[...players].sort((a,b)=>b.kills-a.kills).map(p=>{
+    const c=(characters[p.character]||characters[0]).color,pg=ping(p);
+    const png=netPlaying?(pg>0||p===me?`<span style="color:${col(pg)}">${pg} ms</span>`:'<span style="color:#7f93a8">…</span>'):'<span style="color:#7f93a8">—</span>';
+    return `<tr class="${p===me?'me ':''}${p.hp<=0?'down':''}"><td><i class="dot" style="background:${c}"></i>${escapeHTML(p.name||'Survivor')}${netPlaying&&p.id===hostId?'<span class="tag">HOST</span>':''}</td><td>${p.kills|0}</td><td>${p.deaths|0}</td><td>${png}</td></tr>`}).join('');
+  setHTML('sbBody',rows);
+}
 function hudUpdate(){
+  updateScoreboard();
   if(!me||state==='menu')return;
   const frac=clamp(me.hp/me.maxHp,0,1);
   $('hpFill').style.transform=$('hpGhost').style.transform=`scaleX(${frac})`;
