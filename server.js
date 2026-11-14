@@ -6,7 +6,7 @@ const http=require('http'),fs=require('fs'),path=require('path'),zlib=require('z
 const {WebSocketServer,WebSocket}=require('ws');
 
 const PORT=process.env.PORT||3000;
-const MAX_PLAYERS=4,MAX_ROOMS=400,MAX_MSG_PER_SEC=150;
+const CHAR_COUNT=7,MAX_PLAYERS=4,MAX_ROOMS=400,MAX_MSG_PER_SEC=150;
 const CODE_CHARS='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no look-alikes (0/O, 1/I)
 const INDEX=path.join(__dirname,'index.html');
 const rooms=new Map();
@@ -91,7 +91,7 @@ wss.on('connection',ws=>{
       }
       const used=new Set(room.members.map(m=>m.character));
       const want=Number(msg.character);
-      const character=Number.isInteger(want)&&want>=0&&want<4&&!used.has(want)?want:[0,1,2,3].find(i=>!used.has(i));
+      const character=Number.isInteger(want)&&want>=0&&want<CHAR_COUNT&&!used.has(want)?want:Array.from({length:CHAR_COUNT},(_,i)=>i).find(i=>!used.has(i));
       const member={ws,id:ws.pid,name:cleanName(msg.name),character,ready:false};
       room.members.push(member);ws.room=room;
       send(ws,{t:'joined',id:ws.pid,code:room.code});
@@ -111,7 +111,7 @@ wss.on('connection',ws=>{
     if(!room.started){
       if(msg.t==='select'){
         const c=Number(msg.character);
-        if(Number.isInteger(c)&&c>=0&&c<4&&!room.members.some(m=>m!==member&&m.character===c)){member.character=c;lobby(room)}
+        if(Number.isInteger(c)&&c>=0&&c<CHAR_COUNT&&!room.members.some(m=>m!==member&&m.character===c)){member.character=c;lobby(room)}
         else send(ws,{t:'error',message:'Character already taken'});
       }else if(msg.t==='ready'){member.ready=!!msg.ready;lobby(room)}
       else if(msg.t==='start'&&isHost&&room.members.every(m=>m.ready||m===member)){
