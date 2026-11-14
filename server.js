@@ -111,7 +111,7 @@ wss.on('connection',ws=>{
     if(msg.t==='chat'){
       const now=Date.now();if(now-(member.lastChat||0)<400)return;member.lastChat=now;
       const text=String(msg.text||'').replace(/[\u0000-\u001f]/g,' ').trim().slice(0,100);
-      if(text)broadcast(room,{t:'chat',name:member.name,text});
+      if(text)broadcast(room,{t:'chat',id:member.id,name:member.name,text});
       return;
     }
     if(!room.started){

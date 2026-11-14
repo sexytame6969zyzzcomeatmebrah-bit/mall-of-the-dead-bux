@@ -223,7 +223,7 @@ p{color:#d5e0e9;line-height:1.45;margin:8px 0;font-size:13px}
   <button class="tbtn" id="tAct" type="button">USE</button>
 </div>
 
-<div id="help">WASD move · Mouse aim · Click shoot · R reload · Q / wheel / 1-6 guns · G or right-click grenade · Shift / Space dash · E use / hold to revive · Esc pause</div>
+<div id="help">WASD move · Mouse aim · Click shoot · R reload · Q / wheel / 1-6 guns · G or right-click grenade · Shift / Space dash · E use / hold to revive · L drop gun · Enter chat · Esc pause</div>
 
 <div id="overlay">
   <div id="panel">
@@ -236,7 +236,7 @@ p{color:#d5e0e9;line-height:1.45;margin:8px 0;font-size:13px}
     </div>
     <!-- MAIN -->
     <div class="scr" id="scrMain">
-      <h1>MALL OF THE DEAD <small id="ver">V51</small></h1>
+      <h1>MALL OF THE DEAD <small id="ver">V54</small></h1>
       <p class="tag">CHRISTMAS AT THE MALL. The power is out, the doors are open and the horde is coming for the tree.</p>
       <div class="chars" id="characters" aria-label="Choose your survivor"></div>
       <input id="playerName" placeholder="Write your name" maxlength="16" autocomplete="off">
@@ -277,7 +277,7 @@ p{color:#d5e0e9;line-height:1.45;margin:8px 0;font-size:13px}
       <h2>HOW TO PLAY</h2>
       <div class="how">
         <p><b>Survive the waves.</b> Zombies pour in through the four gates. Every 5th wave is a boss: the Giant, then Zombie Santa.</p>
-        <p><b>PC:</b> WASD move · mouse aim · click shoot · R reload · Q, wheel or 1-6 switch guns · G / right-click grenade · Shift or Space dash · E use doors and the radio, hold E next to a downed friend to revive.</p>
+        <p><b>PC:</b> WASD move · mouse aim · click shoot · R reload · Q, wheel or 1-6 switch guns · G / right-click grenade · Shift or Space dash · E use doors and the radio, hold E next to a downed friend to revive. T next radio song. L drops your current gun (not the AR). Enter opens chat.</p>
         <p><b>Phone:</b> left thumb anywhere to move, right thumb anywhere to aim and fire. Buttons for dash, grenade, reload, gun and use.</p>
         <p><b>Gamepad:</b> sticks move and aim · RT fire · A dash · RB grenade · X reload · Y gun · B use.</p>
         <p><b>Loot:</b> kill the glowing crate carriers to unlock new guns for the whole team. Zombies sometimes drop power-ups.</p>
@@ -805,8 +805,8 @@ const DUST_BARRELS=[[15.0,10.0],[17.4,12.0],[11.4,10.6],[21.0,10.2],[12.6,6.8],[
 MAPS.dust={name:'DUST',mk:()=>[],barrels:DUST_BARRELS,lights:null,
   gates:[{x:16,y:-17.0,jx:2.0},{x:16,y:39.2,jx:2.0},{x:.95,y:11,jy:1.7},{x:31.05,y:11,jy:1.7}],
   bossGates:[{x:16,y:-16.6},{x:16,y:38.8},{x:1.4,y:11},{x:30.6,y:11}],
-  radio:[4.6,16.7],door:[9.8,17.5],start:{x:11.6,y:17.2},
-  aid:[{name:'THE SHELTER',spots:[[4.4,18.6],[5.8,19.2],[7.2,17.6]]},{name:'THE CHURCH',spots:[[8.0,6.8],[9.4,7.0],[6.6,7.0]]}],
+  radio:[4.6,17.9],door:[9.8,17.5],start:{x:11.6,y:17.2},
+  aid:[{name:'THE SHELTER',spots:[[6.6,19.2],[7.8,18.8],[7.0,17.4]]},{name:'THE CHURCH',spots:[[8.0,6.8],[9.4,7.0],[6.6,7.0]]}],
   amb:[255,255,255],snow:false,day:true};
 const DUST_ROADS=[[13.6,-18,18.4,40],[0,8.6,32,13.4]];
 
@@ -838,7 +838,7 @@ function buildDust(){
   wall(3.0,21.2,3.0,.42);wall(7.6,21.2,2.4,.42);
   wall(9.58,15.4,.42,1.4);wall(9.58,18.2,.42,3.42);
   officeDoor={x:9.58,y:16.8,w:.42,h:1.4,type:'officeDoor',solid:true,renderOrder:25.2,hp:120,broken:0};props.push(officeDoor);
-  props.push({x:4.6,y:16.7,w:0,h:0,type:'radio',solid:false,renderOrder:18.5});
+  props.push({x:4.6,y:17.9,w:0,h:0,type:'radio',solid:false,renderOrder:26.5});
   props.push({x:6.4,y:15.9,w:0,h:0,type:'dsign',text:'SHELTER',solid:false,renderOrder:999});
   rect(4.0,19.6,.8,.7,'crate');rect(8.4,19.8,.7,.7,'crate');
   // sandbag nest and wrecks outside the shelter
@@ -854,8 +854,8 @@ function buildDust(){
   wreck(14.0,30.6,false,'#33363b');bag(16.2,30.8,.8,.5);
   scrap(13.6,26.3,3.0,.45);bag(16.8,26.2,1.6,.5);car(13.8,24.6,true,'#c23b3b');
   // ---- west approach (road runs in from x=0)
-  wreck(3.0,8.7,true,'#5a3b30');bag(3.0,10.9,.5,.7);scrap(1.8,13.6,.45,2.4);
-  scrap(6.0,10.4,.45,3.0);
+  V(2.4,8.8,4.4,1.7,'tanker','#a8322a',{rev:0});scrap(1.8,13.6,.45,2.4);
+  scrap(6.0,12.2,.45,1.2);
   // ---- east approach
   wreck(28.8,10.7,true,'#33363b');bag(28.9,12.9,.5,.5);scrap(30.6,6.2,.45,2.6);
   scrap(25.5,8.7,.45,2.6);car(23.4,12.0,false,'#8a5ac2');
@@ -957,7 +957,7 @@ const SFX={
   gun2(t,v,p){aNoise(t,.17,1.15*v,65,5900,true,p);aNoise(t+.018,.23,.75*v,45,2300,true,p);aTone(t,105,27,.26,.55*v,'sawtooth',true,p);aNoise(t+.12,.13,.24*v,90,1600,true,p);aNoise(t+.23,.14,.15*v,100,1200,true,p)},
   gun3(t,v,p){aNoise(t,.2,1.5*v,45,4600,true,p);aTone(t,90,20,.45,.95*v,'sine',true,p);aNoise(t+.04,.28,.9*v,150,2600,true,p);aNoise(t+.08,.9,.6*v,350,2800,true,p);aNoise(t+.3,.7,.35*v,500,2200,true,p);aTone(t+.02,380,90,.7,.22*v,'sawtooth',true,p)},
   gun4(t,v,p){aNoise(t,.16,.17*v,500,3600,false,p);aNoise(t,.2,.12*v,60,500,false,p)},
-  gun5(t,v,p){aTone(t,2400,160,.28,.3*v,'sawtooth',true,p);aTone(t,900,60,.35,.4*v,'square',true,p);aNoise(t,.2,.5*v,900,9000,true,p)},
+  gun5(t,v,p){aTone(t,85,100,.3,.26*v,'sawtooth',true,p);aTone(t,170,200,.3,.12*v,'square',false,p);aNoise(t,.28,.3*v,500,3600,true,p)},
   boxerDamage(t,v,p){aTone(t,200,75,.26,.36*v,'sawtooth',false,p);aTone(t,120,60,.3,.24*v,'square',false,p);aNoise(t,.16,.22*v,500,2600,false,p)},
   boxerStreak(t,v,p){aTone(t,130,310,.3,.3*v,'sawtooth',true,p);aTone(t+.26,310,170,.42,.3*v,'sawtooth',true,p);aNoise(t,.45,.15*v,400,2600,true,p);aNoise(t+.75,.07,.6*v,60,500,true,p);aNoise(t+.9,.07,.6*v,60,500,true,p)},
   pickleDamage(t,v,p){aTone(t,300,110,.22,.34*v,'sawtooth',false,p);aTone(t,190,85,.26,.22*v,'square',false,p);aNoise(t,.2,.22*v,700,3400,false,p)},
@@ -1211,7 +1211,7 @@ const GUNS=[
   {name:'SHOTGUN',clip:8,rate:.32,dmg:30,speed:18,spread:.17,reload:2.1,pellets:9,pen:3,life:.34,kb:1.5,len:30,unlock:3},
   {name:'RPG',clip:1,rate:1,dmg:270,speed:11,spread:.01,reload:6.5,pellets:1,pen:1,life:1.8,kb:0,len:40,unlock:6,boom:3.2},
   {name:'FLAMER',clip:90,rate:.04,dmg:6,speed:9.5,spread:.2,reload:2.4,pellets:1,pen:99,life:.45,kb:0,len:30,unlock:8,flame:true},
-  {name:'RAILGUN',clip:5,rate:.85,dmg:300,speed:70,spread:0,reload:2.3,pellets:1,pen:14,life:.4,kb:2.2,len:46,unlock:11,rail:true},
+  {name:'CHAINSAW',clip:100,rate:.07,dmg:16,speed:10,spread:.34,reload:2.2,pellets:2,pen:99,life:.15,kb:.25,len:46,unlock:11,saw:true},
   // Boss drop: not part of the team arsenal. The pickup grants ~15 seconds of continuous fire.
   {name:'MINIGUN',clip:0,rate:.0075,dmg:22,speed:22,spread:.07,reload:0,pellets:1,pen:1,life:.9,kb:.5,len:50,unlock:9999} // LMG bullet stream at 10x the LMG fire rate
 ];
@@ -1314,6 +1314,14 @@ function changeGun(p,n){
   if(n===MINI){if(p.ammo[MINI]<=0)p.ammo[MINI]=Math.round(MINI_SECONDS/(GUNS[MINI].rate*rateMul(p)));fx(['snd','miniSpin',r2(p.x),r2(p.y)])}
   p.weapon=n;p.reload=0;p.reloadTotal=0;p.reloadStage=0;p.magKills=0;p.shouted=false;p.cool=Math.max(p.cool,.14);p.mwind=0;p.mgrace=0;
 }
+// L: drop the gun in your hands (not the starting AR, not the minigun). It is locked for you until you pick it up again.
+function dropGun(p){
+  const w=p.weapon;if(!p||p.hp<=0||w===0||w===MINI||!hasGun(p,w))return;
+  let x=p.x+Math.cos(p.angle)*1.0,y=p.y+Math.sin(p.angle)*1.0;if(collision(x,y,.25)){x=p.x;y=p.y}
+  p.gunLock=(p.gunLock||0)|(1<<w);changeGun(p,0);
+  pickups.push({id:nextEid++,type:'w'+w,x,y,drop:true,ign:p.id,igt:1.6});
+  say('DROPPED '+GUNS[w].name,p.x,p.y-1.3,'#ffe18b',1.4);fx(['snd','click']);
+}
 function swapGun(p,dir=1){
   const have=[];for(let i=0;i<GUNS.length;i++)if(hasGun(p,i))have.push(i);
   changeGun(p,have[(have.indexOf(p.weapon)+dir+have.length)%have.length]);
@@ -1324,13 +1332,13 @@ function tryShoot(p){
   if(w===MINI&&p.ammo[w]<=0){changeGun(p,0);say('MINIGUN EMPTY',p.x,p.y-1.4,'#ffb37a',1.2);fx(['snd','miniEmpty',r2(p.x),r2(p.y)]);return}
   if(p.ammo[w]<=0){startReload(p);return}
   p.cool=g.rate*rateMul(p);p.ammo[w]--;
-  const kind=g.flame?1:g.boom?2:g.rail?3:0,mul=dmgMul(p);
+  const kind=g.flame?1:g.boom?2:g.saw?4:0,mul=dmgMul(p);
   for(let i=0;i<g.pellets;i++){
     const a=p.angle+rand(-g.spread,g.spread),sp=g.speed*(g.flame?rand(.8,1.15):1);
     bullets.push({x:p.x+Math.cos(a)*.42,y:p.y+Math.sin(a)*.42,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,life:g.life,
       dmg:g.dmg*mul,pen:g.pen+(kind===0?pk(p,'pierce'):0),hit:[],o:p.id,k:kind,w});
   }
-  if(w!==MINI||((p.mseq=(p.mseq||0)+1)&3)===0)fx(['shot',p.id,w,r2(p.x),r2(p.y),r2(p.angle)]);
+  if((w!==MINI&&w!==5)||((p.mseq=(p.mseq||0)+1)&3)===0)fx(['shot',p.id,w,r2(p.x),r2(p.y),r2(p.angle)]);
   if(p.ammo[w]===0)startReload(p);
 }
 function throwNade(p,tx,ty){
@@ -1421,7 +1429,7 @@ function explode(b){
   fx(['boom',r2(b.x),r2(b.y),b.r,b.kind||0]);
   if(b.dmg>0)for(const z of zombies){
     if(z.dead)continue;const d=Math.hypot(z.x-b.x,z.y-b.y);
-    if(d<b.r+ZT[z.t].r)damageZombie(z,b.dmg*(1-.55*Math.min(1,d/b.r))*(b.kind===5&&ZT[z.t].boss?.6:1),b.o,{blast:true,dir:[z.x-b.x,z.y-b.y],kb:3});
+    if(d<b.r+ZT[z.t].r)damageZombie(z,b.dmg*(1-.55*Math.min(1,d/b.r)),b.o,{blast:true,dir:[z.x-b.x,z.y-b.y],kb:3});
   }
   if(b.hurt)for(const p of players){
     const d=Math.hypot(p.x-b.x,p.y-b.y);
@@ -1687,10 +1695,10 @@ function updateBullets(dt){
     const steps=Math.max(1,Math.ceil(Math.hypot(b.vx,b.vy)*dt/.17));let gone=false;
     for(let k=0;k<steps&&!gone;k++){
       b.x+=b.vx*dt/steps;b.y+=b.vy*dt/steps;
-      if(bulletCollision(b.x,b.y,.07)){gone=true;if(b.k===2)boomQueue.push({x:b.x-b.vx*.02,y:b.y-b.vy*.02,r:GUNS[3].boom,dmg:b.dmg,o:b.o,t:0,kind:5});else if(b.k!==1)fx(['spark',r2(b.x),r2(b.y)]);break}
+      if(bulletCollision(b.x,b.y,.07)){gone=true;if(b.k===2)boomQueue.push({x:b.x-b.vx*.02,y:b.y-b.vy*.02,r:GUNS[3].boom,dmg:b.dmg,o:b.o,t:0,kind:5});else if(b.k!==1&&b.k!==4)fx(['spark',r2(b.x),r2(b.y)]);break}
       for(const br of barrels){
         if(br.alive&&Math.abs(b.x-br.x-.25)<.34&&Math.abs(b.y-br.y-.25)<.34){
-          br.hp-=b.dmg;if(br.hp<=0)blowBarrel(br,b.o);else if(b.k!==1)fx(['spark',r2(b.x),r2(b.y)]);
+          br.hp-=b.dmg;if(br.hp<=0)blowBarrel(br,b.o);else if(b.k!==1&&b.k!==4)fx(['spark',r2(b.x),r2(b.y)]);
           if(b.k===2){boomQueue.push({x:b.x,y:b.y,r:GUNS[3].boom,dmg:b.dmg,o:b.o,t:0,kind:5});gone=true}else if(b.k!==1&&b.k!==3)gone=true;
           break;
         }
@@ -1703,6 +1711,7 @@ function updateBullets(dt){
         b.hit.push(z.id);
         if(b.k===2){boomQueue.push({x:b.x,y:b.y,r:GUNS[3].boom,dmg:b.dmg,o:b.o,t:0,kind:5});gone=true;break}
         if(b.k===1){z.burn=2.6;z.burnDps=Math.max(z.burnDps,16*(b.dmg/GUNS[4].dmg));z.burnBy=b.o;damageZombie(z,b.dmg,b.o,{quiet:true});continue}
+        if(b.k===4){if(Math.random()<.3||z.hp-b.dmg<=0)fx(['blood',r2(z.x),r2(z.y),z.hp-b.dmg<=0?1:0]);damageZombie(z,b.dmg,b.o,{dir:[b.vx,b.vy],kb:GUNS[b.w].kb,quiet:true});continue}
         fx(['blood',r2(z.x),r2(z.y),z.hp-b.dmg<=0?1:0]);
         damageZombie(z,b.dmg,b.o,{dir:[b.vx,b.vy],kb:GUNS[b.w].kb,canCrit:true});
         if(--b.pen<=0){gone=true;break}
@@ -1759,8 +1768,7 @@ function addBots(n){
 function botGun(p,t,d,near,boss){
   let w=0;
   if(p.ammo[MINI]>0)return MINI;
-  if(boss&&hasGun(p,5))w=5;
-  else if(boss&&hasGun(p,3)&&d>4)w=3;
+  if(boss&&hasGun(p,3)&&d>4)w=3;
   else if(near>=7&&hasGun(p,3)&&d>4.5)w=3;
   else if(near>=4&&d<4.5&&hasGun(p,4))w=4;
   else if(d<3.3&&hasGun(p,2))w=2;
@@ -1869,9 +1877,13 @@ function updatePickups(dt){
   for(let i=pickups.length-1;i>=0;i--){
     const k=pickups[i];
     if(k.life!=null){k.life-=dt;if(k.life<=0){pickups.splice(i,1);continue}}
-    const p=players.find(a=>a.hp>0&&Math.hypot(a.x-k.x,a.y-k.y)<.72);
+    if(k.igt>0)k.igt-=dt;
+    const p=players.find(a=>a.hp>0&&Math.hypot(a.x-k.x,a.y-k.y)<.72&&!(k.drop&&((k.igt>0&&a.id===k.ign)||hasGun(a,Number(k.type[1])))));
     if(!p)continue;
-    if(k.type[0]==='w'){
+    if(k.drop){
+      const n=Number(k.type[1]);p.gunLock=(p.gunLock||0)&~(1<<n);p.ammo[n]=clipOf(p,n);changeGun(p,n);p.cool=.1;
+      say('PICKED UP '+GUNS[n].name,p.x,p.y-1.3,'#ffe18b',1.6);fx(['snd','weapon']);
+    }else if(k.type[0]==='w'){
       const n=Number(k.type[1]);teamOwned|=1<<n;
       for(const q of players)q.ammo[n]=clipOf(q,n);
       changeGun(p,n);p.cool=.1;
@@ -2065,7 +2077,7 @@ function handleNet(msg){
     case 'action':if(netHost&&netPlaying&&msg.action&&typeof msg.action==='object')applyAction(playerById(msg.id),msg.action);break;
     case 'snapshot':if(netPlaying&&!netHost&&msg.snapshot)applySnap(msg.snapshot);break;
     case 'reset':netPlaying=false;state='menu';netHost=hostId===netId;zMap.clear();showScreen('scrLobby');lobbyDraw();break;
-    case 'chat':addChat(msg.name,msg.text);break;
+    case 'chat':addChat(msg.name,msg.text,msg.id);break;
     case 'pong':netPing=Math.round(performance.now()-msg.ts);break;
   }
 }
@@ -2103,6 +2115,7 @@ function applyAction(p,a){
     case 'gun':changeGun(p,a.n|0);break;
     case 'interact':interact(p);break;
     case 'radio':radioNext(p);break;
+    case 'drop':dropGun(p);break;
     case 'perk':choosePerk(p,a.i|0);break;
     case 'nade':if(Number.isFinite(+a.x)&&Number.isFinite(+a.y))throwNade(p,+a.x,+a.y);break;
     case 'dash':
@@ -2346,12 +2359,12 @@ function playFx(ev){
       if(fxFromNet&&ev[1]===netId)break;
       const [,pid,w,x,y,a]=ev,g=GUNS[w],p=playerById(pid),mx=x+Math.cos(a)*.85,my=y+Math.sin(a)*.85;
       if(p)p.flash=.06;
-      flashes.push({x:mx,y:my,z:.6,r:g.flame?1.7:g.rail?3.6:g.boom?4.4:2.7,life:.07,max:.07,c:g.flame?'#ff9a3c':g.rail?'#8fe9ff':'#ffd79a'});
-      if(!g.flame&&!g.rail&&!g.boom){const sa=a+Math.PI/2*(Math.random()<.5?1:-1);addP({x,y,z:.62,vx:Math.cos(sa)*rand(.8,1.6),vy:Math.sin(sa)*rand(.8,1.6),vz:rand(1.6,2.6),g:9,life:.55,max:.55,color:w===2?'#c0392b':'#d8b45a',size:w===2?4:3,k:0})}
-      if(g.rail){const h=raycast(mx,my,a,40);beams.push({x0:mx,y0:my,x1:h.x,y1:h.y,life:.28,max:.28})}
+      flashes.push({x:mx,y:my,z:.6,r:g.flame?1.7:g.saw?2.2:g.boom?4.4:2.7,life:.07,max:.07,c:g.flame?'#ff9a3c':'#ffd79a'});
+      if(g.saw)burst(mx,my,3,['#ffd35a','#ff9a3c','#8a8a8a'],3,.25,3);
+      if(!g.flame&&!g.saw&&!g.boom){const sa=a+Math.PI/2*(Math.random()<.5?1:-1);addP({x,y,z:.62,vx:Math.cos(sa)*rand(.8,1.6),vy:Math.sin(sa)*rand(.8,1.6),vz:rand(1.6,2.6),g:9,life:.55,max:.55,color:w===2?'#c0392b':'#d8b45a',size:w===2?4:3,k:0})}
       if(g.boom){smoke(mx,my,6,.25);smoke(x-Math.cos(a)*.9,y-Math.sin(a)*.9,6,.45);burst(x-Math.cos(a)*.7,y-Math.sin(a)*.7,10,['#ffd35a','#ff9a3c','#8a8a8a'],5,.35,4)}
       if(w===6)miniFire(x,y);else sfx('gun'+w,x,y);
-      if(p===me){addShake(w===6?.9:w===2?4.5:w===5?6:w===3?9:w===4?.6:1.6);if(COARSE&&navigator.vibrate&&w!==4&&w!==1&&w!==0)navigator.vibrate(12)}
+      if(p===me){addShake(w===6?.9:w===2?4.5:w===5?1.2:w===3?9:w===4?.6:1.6);if(COARSE&&navigator.vibrate&&w!==4&&w!==1&&w!==0)navigator.vibrate(12)}
       break}
     case 'txt':texts.push({text:ev[1],x:ev[2],y:ev[3],z:1.5,life:ev[5],max:ev[5],color:ev[4],size:ev[6]||18});break;
     case 'dmg':
@@ -2730,7 +2743,11 @@ function drawGun(w,hand,reloading,progress){
     ctx.fillStyle='#2a3036';ctx.fillRect(-4,-5,22,10);ctx.fillStyle='#d8481f';ctx.fillRect(-9,-4,6,8);ctx.fillStyle='#3a424a';ctx.fillRect(16,-6,10,12);
     const sp=Math.floor(clock*40)%3;for(let i=0;i<3;i++){ctx.fillStyle=(i+sp)%3===0?'#c3cbd1':'#6f7981';ctx.fillRect(24,-6+i*4.3,28,2.8)}
     ctx.fillStyle='#161a1e';ctx.fillRect(50,-7,3,14);ctx.fillStyle='#ffb04a';ctx.fillRect(8,5,12,6)}
-  else if(w===5){ctx.fillStyle='#1c2733';ctx.fillRect(4,-4,34,8);ctx.fillStyle='#5fd9ff';ctx.fillRect(12,-1.5,34,3);ctx.fillStyle='#2f4356';ctx.fillRect(34,-5,4,10);ctx.fillRect(42,-5,4,10)}
+  else if(w===5){ // chainsaw: orange engine housing, rear handle, long bar with a running chain
+    ctx.fillStyle='#d8651f';ctx.fillRect(-2,-7,18,13);ctx.fillStyle='#1b1e22';ctx.fillRect(-9,-4,8,7);ctx.fillRect(2,-9,6,3);
+    ctx.fillStyle='#9aa1a8';ctx.fillRect(16,-3.5,32,7);ctx.fillStyle='#2a2d31';
+    const ph=(clock*70)%4;for(let x=16+ph;x<48;x+=4)ctx.fillRect(x,-4.5,1.6,2);for(let x=16+ph;x<48;x+=4)ctx.fillRect(x,2.6,1.6,2);
+    ctx.fillStyle='#ffb04a';ctx.fillRect(6,-6,6,2)}
   else{
     ctx.fillStyle=w===2?'#50301c':'#202a33';ctx.fillRect(4,-4,w===1?35:30,8);
     ctx.fillStyle=w===2?'#5e6162':'#5b666b';ctx.fillRect(w===1?30:25,-3,w===1?25:15,w===1?6:5);
@@ -3038,6 +3055,7 @@ function draw(dt){
   ctx.save();ctx.globalCompositeOperation='lighter';ctx.lineCap='round';
   if(mapId==='city')drawCityGlow();
   for(const b of bullets){
+    if(b.k===4)continue;
     const q=project(b.x,b.y,.52);if(!onScreen(q,40))continue;
     if(b.k===1){const a=clamp(b.life/.45,0,1);ctx.globalAlpha=.55*a+.15;ctx.fillStyle=a>.6?'#ffe07a':a>.3?'#ff9a3c':'#d8481f';ctx.beginPath();ctx.arc(q.x,q.y,5+(1-a)*13,0,TAU);ctx.fill();continue}
     if(b.k===2){ // RPG rocket: fiery exhaust, red body, steel tip
@@ -3063,7 +3081,7 @@ function draw(dt){
   for(const p of players){ // muzzle flash
     if(p.flash<=0||p.hp<=0||GUNS[p.weapon].flame)continue;
     const base=project(p.x,p.y),a=screenAngle(p.angle),L=GUNS[p.weapon].len+8,mx=base.x+Math.cos(a)*L,my=base.y-23+Math.sin(a)*L;
-    ctx.globalAlpha=1;ctx.fillStyle=p.weapon===5?'#bff3ff':'#fff1b8';ctx.beginPath();ctx.arc(mx,my,p.weapon===2?13:8,0,TAU);ctx.fill();
+    ctx.globalAlpha=1;ctx.fillStyle='#fff1b8';ctx.beginPath();ctx.arc(mx,my,p.weapon===2?13:8,0,TAU);ctx.fill();
     ctx.globalAlpha=.6;ctx.fillStyle='#ffb347';ctx.beginPath();ctx.arc(mx+Math.cos(a)*8,my+Math.sin(a)*8,p.weapon===2?9:5,0,TAU);ctx.fill();
   }
   if(settings.light&&!MAPS[mapId].day){ // eyes in the dark
@@ -3104,6 +3122,23 @@ function drawOccludedOutline(){
 function label(text,x,y,size,color,stroke='#101820'){
   ctx.font='900 '+size+'px system-ui';ctx.lineWidth=Math.max(3,size/5);ctx.strokeStyle=stroke;ctx.lineJoin='round';ctx.strokeText(text,x,y);ctx.fillStyle=color;ctx.fillText(text,x,y);
 }
+function drawBubbles(){
+  for(const p of players){
+    if(!p.bub)continue;
+    const left=p.bubEnd-clock;if(left<=0){p.bub=null;continue}
+    const q=project(p.x,p.y,2.0);if(!onScreen(q,140))continue;
+    ctx.save();ctx.globalAlpha=clamp(left/.6,0,1);ctx.font='700 13px system-ui';ctx.textAlign='center';
+    const lines=[];let cur='';
+    for(const w of p.bub.split(' ')){const t=cur?cur+' '+w:w;if(ctx.measureText(t).width>150&&cur){lines.push(cur);cur=w}else cur=t}
+    lines.push(cur);if(lines.length>4){lines.length=4;lines[3]+='…'}
+    const lh=16,wd=Math.min(176,Math.max(...lines.map(l=>ctx.measureText(l).width))+18),ht=lines.length*lh+10,x=q.x-wd/2,y=q.y-ht-8;
+    ctx.fillStyle='#fffdf4';ctx.strokeStyle='#1b1b22';ctx.lineWidth=2;
+    ctx.beginPath();ctx.roundRect(x,y,wd,ht,9);ctx.moveTo(q.x-6,y+ht);ctx.lineTo(q.x,y+ht+8);ctx.lineTo(q.x+6,y+ht);ctx.fill();ctx.stroke();
+    ctx.beginPath();ctx.moveTo(q.x-5,y+ht-1);ctx.lineTo(q.x,y+ht+6);ctx.lineTo(q.x+5,y+ht-1);ctx.fill();
+    ctx.fillStyle='#1b1b22';lines.forEach((l,i)=>ctx.fillText(l,q.x,y+14+i*lh));
+    ctx.restore();
+  }
+}
 function drawWorldText(){
   ctx.textAlign='center';ctx.textBaseline='alphabetic';
   for(const t of texts){
@@ -3112,6 +3147,7 @@ function drawWorldText(){
   }
   ctx.globalAlpha=1;
   if(state!=='playing'&&state!=='over')return;
+  drawBubbles();
   for(const p of players){
     const q=project(p.x,p.y);if(!onScreen(q))continue;
     if(isMulti()&&p!==me){
@@ -3469,9 +3505,9 @@ function drawTower(p){
 }
 // Big vehicles. Axis-aligned for collision; kind picks the look: bus, ft (fire truck), amb, van, truck.
 function drawBigVeh(p){
-  const vert=p.h>=p.w,L=vert?p.h:p.w,Wd=vert?p.w:p.h,k=p.kind,H={bus:1.5,ft:1.55,amb:1.4,van:1.3,truck:1.6}[k]||1.4,rev=!!p.rev;
+  const vert=p.h>=p.w,L=vert?p.h:p.w,Wd=vert?p.w:p.h,k=p.kind,H={bus:1.5,ft:1.55,amb:1.4,van:1.3,truck:1.6,tanker:1.7}[k]||1.4,rev=!!p.rev;
   const P=(u,v,z)=>vert?project(p.x+v*Wd,p.y+u*L,z):project(p.x+u*L,p.y+v*Wd,z);
-  const cabS=rev?0:(k==='bus'?.9:.74),cabE=rev?(k==='bus'?.1:.26):1,c=p.c;
+  const cabS=rev?0:(k==='bus'?.9:k==='tanker'?.78:.74),cabE=rev?(k==='bus'?.1:.26):1,c=p.c;
   if(!onScreen(P(.5,.5,0),220))return;
   ctx.save();ctx.globalAlpha=.45;quad(P(-.03,-.05,0),P(1.03,-.05,0),P(1.03,1.05,0),P(-.03,1.05,0),'#000');ctx.restore();
   // side
@@ -3491,6 +3527,13 @@ function drawBigVeh(p){
     const m=rev?.62:.4;quad(P(m-.03,1,.8),P(m+.03,1,.8),P(m+.03,1,1.2),P(m-.03,1,1.2),'#d32a2a');quad(P(m-.1,1,.97),P(m+.1,1,.97),P(m+.1,1,1.03),P(m-.1,1,1.03),'#d32a2a');
   }else{
     quad(P(cabS+.03,1,.8),P(cabE-.03,1,.8),P(cabE-.03,1,1.25),P(cabS+.03,1,1.25),'#0e1620');
+    if(k==='tanker'){ // silver tank barrel behind the cab, red hazard band, FUEL stencil
+      const t0=rev?.26:0,t1=rev?1:.74;
+      quad(P(t0,1,.42),P(t1,1,.42),P(t1,1,H),P(t0,1,H),'#b4b9bf');
+      quad(P(t0,1,H-.4),P(t1,1,H-.4),P(t1,1,H),P(t0,1,H),'#d9dde0');
+      quad(P(t0,1,.72),P(t1,1,.72),P(t1,1,.9),P(t0,1,.9),'#c23b2f');
+      const q=P((t0+t1)/2,1,.81);ctx.save();ctx.fillStyle='#fff';ctx.font='900 9px system-ui';ctx.textAlign='center';ctx.fillText('FUEL',q.x,q.y+3);ctx.restore();
+    }
     if(k==='truck')quad(P(rev?.32:.04,1,.45),P(rev?.96:.68,1,.45),P(rev?.96:.68,1,1.55),P(rev?.32:.04,1,1.55),shade(c,-10));
   }
   // end cap (u=1)
@@ -3506,6 +3549,10 @@ function drawBigVeh(p){
   }else{quad(P(1,.08,.6),P(1,.92,.6),P(1,.92,1.2),P(1,.08,1.2),shade(c,-55))}
   // roof
   quad(P(0,0,H),P(1,0,H),P(1,1,H),P(0,1,H),shade(c,14),'#ffffff22');
+  if(k==='tanker'){
+    const t0=rev?.26:0,t1=rev?1:.74;quad(P(t0,0,H),P(t1,0,H),P(t1,1,H),P(t0,1,H),'#d3d7da','#ffffff30');
+    for(const u of [.2,.5]){const q=P(t0+(t1-t0)*u+.04,.5,H+.01);ctx.fillStyle='#6b7178';ctx.beginPath();ctx.ellipse(q.x,q.y,5,2.6,0,0,TAU);ctx.fill()}
+  }
   if(k==='ft'){
     // aerial ladder, extended forward over the cab and out past the bumper
     const f=rev?-1:1,u0=rev?.85:.1,u1=rev?-.55:1.6;
@@ -4113,8 +4160,9 @@ function readInput(){
   inp.fire=fire;
 }
 // ---- chat: Enter opens the box, Enter sends, Esc cancels; messages show under the minimap and fade
-function addChat(name,text){
+function addChat(name,text,id){
   const log=$('chatLog');if(!log||!text)return;
+  const sp=id!=null?playerById(id):null;if(sp){sp.bub=String(text);sp.bubEnd=clock+5.5}
   const d=document.createElement('div'),b=document.createElement('b');b.textContent=name+':';d.appendChild(b);d.appendChild(document.createTextNode(String(text)));
   log.appendChild(d);while(log.children.length>6)log.firstChild.remove();
   setTimeout(()=>d.classList.add('fade'),6500);setTimeout(()=>d.remove(),7800);
@@ -4123,7 +4171,7 @@ function openChat(){clearHeld();const c=$('chatBox');c.style.display='block';c.v
 function closeChat(){const c=$('chatBox');c.blur();c.style.display='none'}
 function sendChat(){
   const text=$('chatBox').value.replace(/[\u0000-\u001f]/g,' ').trim().slice(0,100);closeChat();if(!text)return;
-  if(netPlaying)netSend({t:'chat',text});else addChat(me?me.name:settings.name||'You',text);
+  if(netPlaying)netSend({t:'chat',text});else addChat(me?me.name:settings.name||'You',text,me?me.id:null);
 }
 addEventListener('keydown',e=>{
   if(e.target&&e.target.id==='chatBox'){e.stopPropagation();if(e.key==='Enter'){e.preventDefault();sendChat()}else if(e.key==='Escape'){e.preventDefault();closeChat()}return}
@@ -4139,6 +4187,7 @@ addEventListener('keydown',e=>{
   if(aimSrc==='pad')aimSrc='mouse';
   if(k==='e')doAct('interact');
   else if(k==='t')doAct('radio');
+  else if(k==='l')doAct('drop');
   else if(k==='r')doAct('reload');
   else if(k==='q')doAct('swap',{d:1});
   else if(k==='g')doNade();
@@ -4353,7 +4402,7 @@ try{
 addEventListener('resize',resize);
 if(window.visualViewport)visualViewport.addEventListener('resize',resize);
 resize();build();buildFloor();mainChars();
-$('ver').textContent='V41';$('bestLine').textContent=bestLine();
+$('ver').textContent='V54';$('bestLine').textContent=bestLine();
 showScreen(QUERY.get('room')?'scrMain':'scrTitle');
 if(location.protocol==='file:')setStatus('Solo works from this file. Online co-op needs the server (npm start).');
 const inviteCode=(QUERY.get('room')||'').toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,6);
