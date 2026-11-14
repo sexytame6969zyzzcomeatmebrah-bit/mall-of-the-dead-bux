@@ -152,8 +152,13 @@ p{color:#d5e0e9;line-height:1.45;margin:8px 0;font-size:13px}
 
 #panel.title{width:min(720px,96vw);background:none;border:none;box-shadow:none;backdrop-filter:none;padding:6px}
 .bigTitle{font-size:clamp(34px,8.5vw,68px);letter-spacing:3px;margin:0 0 2px;color:#e8402e;text-shadow:0 0 28px #ff2a1a88,0 4px 0 #4a0f0a}
-#titleArt{width:100%;height:auto;aspect-ratio:640/300;border-radius:14px;border:1px solid #65809a88;box-shadow:0 18px 60px #000c;margin:6px 0 14px;display:block}
-@media (max-height:430px){#titleArt{max-height:48dvh;width:auto;margin-left:auto;margin-right:auto}}
+
+#overlay.title{background:none;padding:0;align-items:stretch}
+#panel.title{width:100%;max-width:none;height:100%;max-height:none;overflow:hidden;border-radius:0;padding:0}
+#panel.title #scrTitle.on{display:flex;flex-direction:column;align-items:center;height:100%;padding:clamp(14px,5vh,48px) 16px clamp(18px,6vh,56px)}
+#scrTitle .titleGap{flex:1}
+#scrTitle .tag{letter-spacing:.35em;color:#9fb0bd;text-shadow:0 2px 8px #000}
+#enterBtn{width:min(340px,80vw);letter-spacing:.3em}
 
 </style>
 </head>
@@ -208,7 +213,7 @@ p{color:#d5e0e9;line-height:1.45;margin:8px 0;font-size:13px}
     <div class="scr" id="scrTitle">
       <h1 class="bigTitle">MALL OF THE DEAD</h1>
       <p class="tag">CHRISTMAS AT THE MALL</p>
-      <canvas id="titleArt" aria-label="Survivors fighting off the horde"></canvas>
+      <div class="titleGap"></div>
       <button class="big" id="enterBtn" type="button">ENTER</button>
     </div>
     <!-- MAIN -->
@@ -805,7 +810,7 @@ function makePlayer(id,character,name,slot=0){
 }
 
 function reset(){
-  build();botCount=0;
+  titleOn=false;build();botCount=0;
   zombies=[];bullets=[];eprojs=[];lobs=[];hazards=[];pickups=[];boomQueue=[];carrierQueue=[];outEvents=[];
   startWave=clamp(Math.floor(Number($('waveTest').value)||1),1,100);
   wave=startWave-1;kills=0;teamScore=0;time=0;intermission=2.6;navTimer=0;spawnLeft=0;spawnTimer=0;waveSize=0;
@@ -2397,7 +2402,8 @@ const snow=[];for(let i=0;i<70;i++)snow.push({x:Math.random(),y:Math.random(),s:
 function draw(dt){
   // camera
   let fxp=16+Math.cos(clock*.07)*6,fyp=13+Math.sin(clock*.07)*4;
-  if(me&&state!=='menu'){
+  if(titleOn){fxp=TITLE_CX;fyp=TITLE_CY}
+  else if(me&&state!=='menu'){
     fxp=me.x;fyp=me.y;
     if(!COARSE&&me.hp>0&&aimSrc==='mouse'){fxp+=Math.cos(me.angle)*.9;fyp+=Math.sin(me.angle)*.9}
   }
@@ -2406,8 +2412,10 @@ function draw(dt){
   cam.sx=shake>0?rand(-shake,shake):0;cam.sy=shake>0?rand(-shake,shake):0;
 
   ctx.setTransform(dpr,0,0,dpr,0,0);ctx.globalAlpha=1;
-  ctx.fillStyle='#b9c7d6';ctx.fillRect(0,0,W,H);
-  if(floorCv)ctx.drawImage(floorCv,cam.x+cam.sx-FX0,cam.y+cam.sy-FY0,FWID,FHEI);
+  if(titleOn){const z=titleZoom();ctx.translate(W/2,H*.5);ctx.scale(z,z);ctx.translate(-W/2,-H*.5)}
+  ctx.fillStyle=titleOn?'#04060a':'#b9c7d6';ctx.fillRect(-W,-H,W*3,H*3);
+  if(titleOn)drawTitleGround();
+  else if(floorCv)ctx.drawImage(floorCv,cam.x+cam.sx-FX0,cam.y+cam.sy-FY0,FWID,FHEI);
 
   // ground decals: hazards and telegraphs
   for(const h of hazards){
@@ -2431,7 +2439,7 @@ function draw(dt){
   // depth-sorted world
   drawList.length=0;
   for(const p of pickups)drawList.push({o:p.x+p.y,k:0,e:p});
-  for(const p of props)drawList.push({o:p.renderOrder??(p.x+p.y+p.w+p.h),k:1,e:p});
+  if(!titleOn)for(const p of props)drawList.push({o:p.renderOrder??(p.x+p.y+p.w+p.h),k:1,e:p});
   for(const z of zombies)drawList.push({o:z.x+z.y,k:2,e:z});
   for(const c of corpses)drawList.push({o:c.x+c.y-.2,k:3,e:c});
   for(const p of players)drawList.push({o:p.x+p.y+(p.hp>0?0:-.3),k:4,e:p});
@@ -2441,7 +2449,7 @@ function draw(dt){
     if(d.k===0)drawPickup(d.e);else if(d.k===1)drawProp(d.e);else if(d.k===2)drawZombie(d.e);
     else if(d.k===3)drawZombie(d.e,d.e);else if(d.k===4)drawSurvivor(d.e);else drawLob(d.e);
   }
-  if(me&&state!=='menu')drawOccludedOutline();
+  if(me&&state!=='menu'&&!titleOn)drawOccludedOutline();
   // acid globs and smoke under the lighting pass
   for(const e of eprojs){const q=project(e.x,e.y,.6);ctx.fillStyle='#9fdc2f';ctx.beginPath();ctx.arc(q.x,q.y,5,0,TAU);ctx.fill();ctx.fillStyle='#e2ff9a';ctx.beginPath();ctx.arc(q.x-1,q.y-1,2,0,TAU);ctx.fill()}
   for(const p of particles){
@@ -2451,7 +2459,7 @@ function draw(dt){
   }
   ctx.globalAlpha=1;
 
-  if(settings.light)drawLighting();
+  if(settings.light&&!titleOn)drawLighting();
 
   // ---- additive glow pass: stays bright in the dark
   ctx.save();ctx.globalCompositeOperation='lighter';ctx.lineCap='round';
@@ -2500,6 +2508,7 @@ function draw(dt){
   ctx.restore();
 
   drawWorldText();
+  if(titleOn){drawTitleOverlay();return}
   drawScreenFx(dt);drawCrosshair();
 }
 function drawOccludedOutline(){
@@ -2611,44 +2620,6 @@ function drawScreenFx(dt){
 
 // ---------------------------------------------------------------- minimap
 
-// ---------------------------------------------------------------- title screen art
-function drawTitleArt(cv){
-  const dp=Math.min(2,window.devicePixelRatio||1),LW=640,LH=300;
-  cv.width=LW*dp;cv.height=LH*dp;const g=cv.getContext('2d');g.setTransform(dp,0,0,dp,0,0);
-  let s=7;const rnd=()=>(s=(s*16807)%2147483647)/2147483647;
-  const bg=g.createLinearGradient(0,0,0,LH);bg.addColorStop(0,'#0b1522');bg.addColorStop(.6,'#1b1822');bg.addColorStop(1,'#241219');g.fillStyle=bg;g.fillRect(0,0,LW,LH);
-  // far mall silhouette and glow of the horde side
-  const gl=g.createRadialGradient(480,150,10,480,150,260);gl.addColorStop(0,'#c8402a66');gl.addColorStop(1,'#c8402a00');g.fillStyle=gl;g.fillRect(0,0,LW,LH);
-  g.fillStyle='#0a1019';for(let i=0;i<12;i++){const w=40+rnd()*40,h=50+rnd()*70;g.fillRect(i*55-10,190-h,w,h)}
-  g.fillStyle='#ffd88a';for(let i=0;i<40;i++)if(rnd()>.6)g.fillRect(rnd()*LW,110+rnd()*70,3,4);
-  // floor
-  const fl=g.createLinearGradient(0,190,0,LH);fl.addColorStop(0,'#2a2f3b');fl.addColorStop(1,'#14171f');g.fillStyle=fl;g.fillRect(0,190,LW,LH-190);
-  g.strokeStyle='#ffffff10';g.lineWidth=1;for(let i=-4;i<16;i++){g.beginPath();g.moveTo(i*50+(i*50-320)*.0,190);g.lineTo(i*90-320,LH);g.stroke()}
-  // zombies (back to front)
-  const Z=[['giant',0,486,206,1.5],['walker',1,380,214,1],['runner',2,430,232,1.05],['crawler',0,350,248,.9],['santa',0,540,236,1.35],['walker',3,470,258,1.15],['sprinter',1,590,262,1.15],['bloater',0,395,268,1.1],['grinch',0,600,214,1.4]].sort((a,b)=>a[3]-b[3]);
-  for(const [t,v,x,y,sc] of Z){
-    g.fillStyle='#0007';g.beginPath();g.ellipse(x,y,22*sc,8*sc,0,0,TAU);g.fill();
-    try{const sp=zSprite(t,v,false);g.save();g.translate(x,y);g.scale(-sc*1.5,sc*1.5);g.drawImage(sp,-24,-70,48,72);g.restore()}catch(e){}
-  }
-  // survivors
-  const mine=chosenCharacter,others=[1,2,4,5,6,7,3,0].filter(i=>i!==mine).slice(0,3);
-  const crew=[[others[0],70,262],[others[1],150,232],[mine,205,266],[others[2],275,240]];
-  const tmp=document.createElement('canvas');tmp.width=120;tmp.height=100;
-  crew.sort((a,b)=>a[2]-b[2]);
-  for(const [ci,x,y] of crew){
-    const c=characters[ci];drawCharacterPreview(tmp,c);
-    g.fillStyle='#0008';g.beginPath();g.ellipse(x,y,20,7,0,0,TAU);g.fill();
-    g.drawImage(tmp,x-60*1.15,y-75*1.15,120*1.15,100*1.15);
-    // rifle + muzzle flash aimed at the horde
-    const gy=y-42*1.15;g.fillStyle='#202a33';g.fillRect(x+4,gy-3,40,6);g.fillStyle='#5b666b';g.fillRect(x+30,gy-2,22,4);
-    g.fillStyle='#ffe9a0';g.beginPath();g.moveTo(x+52,gy);g.lineTo(x+66,gy-6);g.lineTo(x+62,gy);g.lineTo(x+66,gy+6);g.closePath();g.fill();
-    g.strokeStyle='#ffec95aa';g.lineWidth=1.6;g.beginPath();g.moveTo(x+70,gy);g.lineTo(x+70+170+rnd()*60,gy-6+rnd()*14);g.stroke();
-  }
-  // snow + vignette
-  g.fillStyle='#ffffffaa';for(let i=0;i<70;i++)g.fillRect(rnd()*LW,rnd()*LH,1.6,1.6);
-  const vg=g.createRadialGradient(LW/2,LH/2,LH*.45,LW/2,LH/2,LW*.62);vg.addColorStop(0,'#0000');vg.addColorStop(1,'#000a');g.fillStyle=vg;g.fillRect(0,0,LW,LH);
-}
-
 let mmBg=null;
 const MMS=1.9,mmp=(x,y)=>[78+(x-y)*MMS,4+(x+y-world.y0)*MMS*.56];
 function drawMinimap(){
@@ -2669,6 +2640,117 @@ function drawMinimap(){
   if(me){const [mx,my]=mmp(me.x,me.y);g.strokeStyle='#fff';g.lineWidth=1;g.beginPath();g.arc(mx,my,4.6,0,TAU);g.stroke()}
 }
 
+// ---- 65_title.js
+// ============================================================================
+//  Title screen: the real game renderer showing a final stand in extreme slow
+//  motion. Four survivors back to back, firing wildly, ringed by the horde.
+// ============================================================================
+const TITLE_CX=16,TITLE_CY=-9,TITLE_SLOW=.11;
+let titleOn=false,titleT=0,titleEyes={};
+function titleSetup(){
+  if(state!=='menu')return;
+  titleOn=true;titleT=0;titleEyes={};
+  zombies=[];bullets=[];players=[];corpses=[];particles.length=0;flashes.length=0;texts.length=0;eprojs=[];lobs=[];hazards=[];pickups=[];
+  const others=[1,2,4,5,6,7,3,0].filter(i=>i!==chosenCharacter).slice(0,3),crew=[chosenCharacter,...others];
+  crew.forEach((c,i)=>{
+    const q=makePlayer('t'+i,c,'',i),a=i/4*TAU+.785;
+    q.x=TITLE_CX+Math.cos(a)*.5;q.y=TITLE_CY+Math.sin(a)*.5;q.base=a;q.angle=a;q.weapon=[0,1,2,0][i];q.ft=rand(.1,1.2);q.burst=0;q.tf=0;q.ph=rand(0,6);
+    players.push(q);
+  });
+  const types=['walker','runner','walker','sprinter','crawler','walker','riot','bloater','runner','walker','spitter','walker','runner','walker','sprinter','walker'];
+  let n=0;
+  for(const [r,cnt] of [[2.8,13],[3.4,18],[4.1,23],[4.9,28]]){
+    for(let i=0;i<cnt;i++){
+      const a=i/cnt*TAU+r*.9+(Math.random()-.5)*.12;
+      if(r<3.6&&Math.abs(Math.atan2(Math.sin(a-.785),Math.cos(a-.785)))<.75)continue; // keep the front clear so the survivors read
+      let t=types[(n++)%types.length];
+      if(r>4.5&&i===5)t='santa';if(r>4.5&&i===17)t='grinch';
+      const z=spawnZombieAt(t,TITLE_CX,TITLE_CY);
+      z.ta=a;z.tr=r+(Math.random()-.5)*.3;z.ph=rand(0,6);z.stride=rand(0,6);
+      z.x=TITLE_CX+Math.cos(a)*z.tr;z.y=TITLE_CY+Math.sin(a)*z.tr;z.angle=a+Math.PI;
+    }
+  }
+}
+function titleOff(){
+  titleOn=false;zombies=[];bullets=[];players=[];particles.length=0;flashes.length=0;texts.length=0;
+}
+function titleStep(dt){
+  const s=dt*TITLE_SLOW;titleT+=s;
+  for(const z of zombies){
+    const sh=.5+.5*Math.sin(titleT*.9+z.ph),rr=z.tr-.3*sh,a=z.ta+Math.sin(titleT*.5+z.ph*2)*.03;
+    z.x=TITLE_CX+Math.cos(a)*rr;z.y=TITLE_CY+Math.sin(a)*rr;z.angle=a+Math.PI;z.stride+=s*7;
+  }
+  players.forEach((q,i)=>{
+    q.angle=q.base+.8*Math.sin(titleT*.7+q.ph)+.4*Math.sin(titleT*1.9+i*1.3);
+    q.tf=Math.max(0,q.tf-dt);
+    q.ft-=dt;
+    if(q.ft<=0){
+      if(q.burst<=0){q.burst=1+Math.floor(Math.random()*4);q.ft=rand(.5,1.6)}
+      else q.ft=rand(.07,.2);
+      q.burst--;
+      const a=q.angle+(Math.random()-.5)*.45,d=.75,g=GUNS[q.weapon],mx=q.x+Math.cos(a)*d,my=q.y+Math.sin(a)*d;
+      q.angle=a;q.tf=.14;q.flash=.12*TITLE_SLOW;
+      bullets.push({x:mx,y:my,vx:Math.cos(a)*22,vy:Math.sin(a)*22,life:rand(.12,.5),k:0});
+      addP({x:q.x,y:q.y,z:.62,vx:Math.cos(a+1.5)*rand(.8,1.6),vy:Math.sin(a+1.5)*rand(.8,1.6),vz:rand(1.6,2.6),g:9,life:.55,max:.55,color:'#d8b45a',size:3,k:0});
+    }
+  });
+  for(let i=bullets.length-1;i>=0;i--){const b=bullets[i];b.x+=b.vx*s;b.y+=b.vy*s;b.life-=s;if(b.life<=0)bullets.splice(i,1)}
+}
+function drawTitleGround(){
+  // pool of light on the floor and a beam falling from above
+  const c=project(TITLE_CX,TITLE_CY,0),rx=TILE*4.4,ry=TILE*2.4;
+  ctx.save();
+  const bx=c.x,top=-40,bw=TILE*1.6,ew=TILE*3.4;
+  const g1=ctx.createLinearGradient(0,top,0,c.y);g1.addColorStop(0,'rgba(210,225,245,0)');g1.addColorStop(.7,'rgba(210,225,245,.1)');g1.addColorStop(1,'rgba(210,225,245,0)');
+  ctx.fillStyle=g1;ctx.beginPath();ctx.moveTo(bx-bw,top);ctx.lineTo(bx+bw,top);ctx.lineTo(bx+ew,c.y);ctx.lineTo(bx-ew,c.y);ctx.closePath();ctx.fill();
+  ctx.translate(c.x,c.y);ctx.scale(1,ry/rx);
+  const g=ctx.createRadialGradient(0,0,0,0,0,rx);g.addColorStop(0,'rgba(215,225,240,.42)');g.addColorStop(.55,'rgba(170,185,210,.2)');g.addColorStop(1,'rgba(120,140,170,0)');
+  ctx.fillStyle=g;ctx.beginPath();ctx.arc(0,0,rx,0,TAU);ctx.fill();
+  ctx.restore();
+}
+function titleEyeFor(z){
+  const id=(z.id||0)%4,k=z.t+'|'+id;
+  if(k in titleEyes)return titleEyes[k];
+  let r=null;
+  try{
+    const sp=zSprite(z.t,id,false),w=sp.width,h=sp.height,d=sp.getContext('2d').getImageData(0,0,w,h).data;
+    let sx=0,sy=0,n=0,mn=1e9,mx=-1e9;
+    for(let y=0;y<h;y++)for(let x=0;x<w;x++){const i=(y*w+x)*4;if(d[i+3]>200&&d[i]>190&&d[i+1]<110&&d[i+2]<110){sx+=x;sy+=y;n++;mn=Math.min(mn,x);mx=Math.max(mx,x)}}
+    if(n)r=[sx/n/w*48-24,sy/n/h*72-70,(mx-mn)/w*48];
+  }catch(e){}
+  return titleEyes[k]=r;
+}
+const titleZoom=()=>Math.max(1,Math.min(H/400,W/520));
+function drawTitleOverlay(){
+  // dim the world to near-darkness, leaving the survivors lit (drawn in the zoomed world transform)
+  {const c=project(TITLE_CX,TITLE_CY,0),rx=TILE*5.6,ry=TILE*3.2;
+   ctx.save();ctx.globalCompositeOperation='multiply';ctx.translate(c.x,c.y);ctx.scale(1,ry/rx);
+   const lg=ctx.createRadialGradient(0,0,0,0,0,rx);lg.addColorStop(0,'rgb(255,250,238)');lg.addColorStop(.42,'rgb(205,208,222)');lg.addColorStop(.62,'rgb(112,117,140)');lg.addColorStop(1,'rgb(18,20,30)');
+   ctx.fillStyle=lg;ctx.fillRect(-rx*3,-rx*3,rx*6,rx*6);ctx.restore()}
+  ctx.save();ctx.globalCompositeOperation='lighter';
+  // muzzle glow
+  for(const q of players){
+    if(q.tf<=0)continue;
+    const p=project(q.x+Math.cos(q.angle)*.9,q.y+Math.sin(q.angle)*.9,.6),a=q.tf/.14,gr=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,24);
+    gr.addColorStop(0,`rgba(255,214,130,${.5*a})`);gr.addColorStop(1,'rgba(255,150,50,0)');ctx.fillStyle=gr;ctx.fillRect(p.x-26,p.y-26,52,52);
+  }
+  // glowing red eyes
+  for(const z of zombies){
+    const e=titleEyeFor(z);if(!e)continue;
+    const q=project(z.x,z.y),sc=Z_SCALE[z.t]||1,bob=Math.sin(clock*5.2+(z.id||0))*2,ex=q.x+e[0]*sc,ey=q.y+(e[1]+bob)*sc,sp=Math.max(4,e[2]/2)*sc;
+    const gr=ctx.createRadialGradient(ex,ey,0,ex,ey,11*sc);gr.addColorStop(0,'rgba(255,30,20,.3)');gr.addColorStop(1,'rgba(255,0,0,0)');ctx.fillStyle=gr;ctx.fillRect(ex-13*sc,ey-13*sc,26*sc,26*sc);
+    ctx.shadowColor='#ff1a08';ctx.shadowBlur=8;ctx.fillStyle='#ff6a50';
+    for(const dx of [-sp*.5,sp*.5]){ctx.beginPath();ctx.arc(ex+dx,ey,1.7*sc,0,TAU);ctx.fill()}
+  }
+  ctx.restore();
+  // heavy vignette: everything outside the light is swallowed by darkness
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.save();ctx.translate(W/2,H*.5);ctx.scale(1.5,1);
+  const R=H*.5,vg=ctx.createRadialGradient(0,0,0,0,0,R);
+  vg.addColorStop(0,'rgba(0,0,0,0)');vg.addColorStop(.2,'rgba(0,0,0,0)');vg.addColorStop(.5,'rgba(2,3,8,.68)');vg.addColorStop(.78,'rgba(1,2,5,.97)');vg.addColorStop(1,'rgba(1,2,5,1)');
+  ctx.fillStyle=vg;ctx.fillRect(-W,-H,W*2,H*2);ctx.restore();
+}
+
 // ---- 70_ui.js
 // ============================================================================
 //  UI: menus, lobby, HUD, input (keyboard + mouse, touch, gamepad), main loop
@@ -2679,8 +2761,8 @@ const escapeHTML=t=>String(t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>'
 const myName=()=>($('playerName').value.trim()||'Survivor').slice(0,16);
 function showScreen(id){
   curScreen=id;for(const el of document.querySelectorAll('.scr'))el.classList.toggle('on',el.id===id);
-  $('overlay').style.display='flex';$('panel').classList.toggle('title',id==='scrTitle');
-  if(id==='scrTitle')drawTitleArt($('titleArt'));
+  $('overlay').style.display='flex';$('panel').classList.toggle('title',id==='scrTitle');$('overlay').classList.toggle('title',id==='scrTitle');
+  if(id==='scrTitle')titleSetup();else if(titleOn)titleOff();
   const inGame=state==='playing'||state==='paused';
   $('hud').style.display=inGame?'block':'none';$('touch').classList.toggle('on',false);
 }
@@ -3037,9 +3119,10 @@ function step(dt){
   else{readInput();update(dt);if(netPlaying&&netHost&&state==='playing')hostNet(dt)}
 }
 function frame(now){
-  const dt=Math.min(.05,Math.max(0,(now-last)/1000));last=now;clock+=dt;
+  const dt=Math.min(.05,Math.max(0,(now-last)/1000));last=now;clock+=titleOn?dt*TITLE_SLOW:dt;
   pollPad();step(dt);netTick(dt);
-  if(state!=='paused')fxUpdate(dt);
+  if(titleOn)titleStep(dt);
+  if(state!=='paused')fxUpdate(titleOn?dt*TITLE_SLOW:dt);
   updateHorde(dt);updateHeart(dt);syncRadio();
   draw(dt);
   hudTimer-=dt;if(hudTimer<=0){hudTimer=.1;hudUpdate()}
