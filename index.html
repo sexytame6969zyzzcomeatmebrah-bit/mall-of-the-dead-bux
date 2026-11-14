@@ -630,6 +630,15 @@ function playVoice(name,vol=1){
   if(AU.muted||!ASSETS[name])return;
   try{const el=new Audio(ASSETS[name]);el.volume=clamp(vol*settings.vol,0,1);const p=el.play();if(p&&p.catch)p.catch(()=>{})}catch(e){}
 }
+// Menu preview: plays a survivor's 5-kill shout when their card is pressed (stops the previous preview first)
+function previewVoice(i){
+  const map=CHAR_VOICE[i]||CHAR_VOICE[0],vol=.855*(map.gain||1);
+  try{if(AU.prev){AU.prev.stop();AU.prev=null}}catch(e){}
+  if(!aOK())return;
+  if(map.streak&&AU.bufs[map.streak]){
+    try{const s=AU.ctx.createBufferSource(),g=AU.ctx.createGain();s.buffer=AU.bufs[map.streak];g.gain.value=vol;s.connect(g);g.connect(AU.master);s.start();AU.prev=s;s.onended=()=>{if(AU.prev===s)AU.prev=null}}catch(e){}
+  }else if(map.synth){try{SFX[map.synth+'Streak'](AU.ctx.currentTime,vol,0)}catch(e){}}
+}
 function charVoice(p,kind){
   const map=CHAR_VOICE[p.character]||CHAR_VOICE[0];let vol=(kind==='damage'?.8:.855)*(map.gain||1);
   if(p!==me&&me){vol*=clamp(1.1-Math.hypot(p.x-me.x,p.y-me.y)/16,.15,.8)}
@@ -2501,7 +2510,7 @@ function buildChars(root,selected,onPick,taken){
     const cv=document.createElement('canvas');cv.width=90;cv.height=90;b.appendChild(cv);
     const s=document.createElement('span');s.textContent=c.name;b.appendChild(s);
     if(taken&&taken(i))b.disabled=true;
-    b.onclick=()=>{sfx('click');onPick(i)};root.appendChild(b);drawCharacterPreview(cv,c);
+    b.onclick=()=>{sfx('click');previewVoice(i);onPick(i)};root.appendChild(b);drawCharacterPreview(cv,c);
   });
 }
 function mainChars(){buildChars($('characters'),chosenCharacter,i=>{chosenCharacter=i;store.set('char',i);mainChars()})}
