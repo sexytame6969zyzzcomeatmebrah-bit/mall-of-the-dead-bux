@@ -6,7 +6,7 @@ const http=require('http'),fs=require('fs'),path=require('path'),zlib=require('z
 const {WebSocketServer,WebSocket}=require('ws');
 
 const PORT=process.env.PORT||3000;
-const CHAR_COUNT=8,MAX_PLAYERS=4,MAX_ROOMS=400,MAX_MSG_PER_SEC=150;
+const CHAR_COUNT=8,MAX_PLAYERS=8,MAX_ROOMS=400,MAX_MSG_PER_SEC=150;
 const CODE_CHARS='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no look-alikes (0/O, 1/I)
 const INDEX=path.join(__dirname,'index.html');
 const rooms=new Map();

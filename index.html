@@ -150,6 +150,11 @@ p{color:#d5e0e9;line-height:1.45;margin:8px 0;font-size:13px}
 #botLabel{justify-content:center;margin:10px 0 4px;letter-spacing:.08em;font-weight:700}
 #botLabel select{background:#1a1411;color:#ffe3a0;border:1px solid #6b4a2a;border-radius:6px;padding:6px 8px;font:inherit;font-size:13px}
 
+#panel.title{width:min(720px,96vw);background:none;border:none;box-shadow:none;backdrop-filter:none;padding:6px}
+.bigTitle{font-size:clamp(34px,8.5vw,68px);letter-spacing:3px;margin:0 0 2px;color:#e8402e;text-shadow:0 0 28px #ff2a1a88,0 4px 0 #4a0f0a}
+#titleArt{width:100%;height:auto;aspect-ratio:640/300;border-radius:14px;border:1px solid #65809a88;box-shadow:0 18px 60px #000c;margin:6px 0 14px;display:block}
+@media (max-height:430px){#titleArt{max-height:48dvh;width:auto;margin-left:auto;margin-right:auto}}
+
 </style>
 </head>
 <body>
@@ -199,12 +204,19 @@ p{color:#d5e0e9;line-height:1.45;margin:8px 0;font-size:13px}
 
 <div id="overlay">
   <div id="panel">
+    <!-- TITLE -->
+    <div class="scr" id="scrTitle">
+      <h1 class="bigTitle">MALL OF THE DEAD</h1>
+      <p class="tag">CHRISTMAS AT THE MALL</p>
+      <canvas id="titleArt" aria-label="Survivors fighting off the horde"></canvas>
+      <button class="big" id="enterBtn" type="button">ENTER</button>
+    </div>
     <!-- MAIN -->
     <div class="scr" id="scrMain">
       <h1>MALL OF THE DEAD <small id="ver">V41</small></h1>
       <p class="tag">CHRISTMAS AT THE MALL. The power is out, the doors are open and the horde is coming for the tree.</p>
       <div class="chars" id="characters" aria-label="Choose your survivor"></div>
-      <input id="playerName" placeholder="Your name" maxlength="16" autocomplete="off">
+      <input id="playerName" placeholder="Write your name" maxlength="16" autocomplete="off">
       <button class="big" id="start" type="button">START SOLO SURVIVAL</button>
       <label class="set" id="botLabel">AI TEAMMATES <select id="botCount"><option value="0">None</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7 (full squad of 8)</option></select></label>
       <div class="btnRow">
@@ -936,7 +948,7 @@ function blowBarrel(br,ownerId,delay=0){
 const ZSPEED={walker:()=>rand(.76,1.02)+wave*.023,runner:()=>rand(1.45,1.85)+wave*.008,sprinter:()=>rand(2.9,3.5),carrier:()=>.95+wave*.02,
   crawler:()=>rand(2.0,2.5),bloater:()=>.62+wave*.01,spitter:()=>.95+wave*.012,riot:()=>.72+wave*.012,giant:()=>.68+wave*.012,santa:()=>.8+wave*.008,grinch:()=>.92+wave*.008};
 function spawnZombieAt(t,x,y,extra){
-  const def=ZT[t],hpScale=def.boss?1:1+Math.max(0,wave-5)*.045;
+  const def=ZT[t],hpScale=def.boss?1:(1+Math.max(0,wave-5)*.045)*(1+.1*Math.max(0,players.length-4)); // beyond 4 players the horde gets tougher rather than only bigger
   const hp=Math.round((extra&&extra.hp||def.hp)*hpScale);
   const sp=ZSPEED[t]();
   const z={id:nextEid++,t,x,y,hp,maxHp:hp,speed:Math.min(sp,t==='walker'?2.0:9),hit:0,attack:rand(0,.4),angle:0,stride:rand(0,6.28),
@@ -1423,7 +1435,7 @@ function nextWave(){
     b.alive=b.solid=true;b.hp=40;
   }
   officeDoor.hp=120;rebuildBlocks();
-  waveSize=spawnLeft=Math.round((12+wave*8)*(boss?1.35:1)*(1+.6*(n-1)));
+  waveSize=spawnLeft=Math.round((12+wave*8)*(boss?1.35:1)*(1+.6*(Math.min(n,4)-1)+.3*Math.max(0,n-4)));
   spawnTimer=.25;intermission=0;
   if(boss)spawnBoss();
   fx(['wave',wave,boss?1:0]);
@@ -2549,7 +2561,7 @@ function drawCrosshair(){
   if(!on)return;
   let x,y;
   if(aimSrc==='mouse'){x=mouse.x;y=mouse.y}
-  else if(aimSrc==='pad'){const q=project(me.x+Math.cos(me.angle)*4.5,me.y+Math.sin(me.angle)*4.5,.4);x=q.x;y=q.y}
+  else if(aimSrc==='pad'){const q=project(me.x+Math.cos(me.angle)*4.5,me.y+Math.sin(me.angle)*4.5,.52);x=q.x;y=q.y}
   else return;
   const kick=Math.min(5,(me.cool||0)*24),R=12+kick,g=3.5+kick*.6;
   ctx.save();ctx.translate(x,y);ctx.lineCap='round';
@@ -2598,6 +2610,45 @@ function drawScreenFx(dt){
 }
 
 // ---------------------------------------------------------------- minimap
+
+// ---------------------------------------------------------------- title screen art
+function drawTitleArt(cv){
+  const dp=Math.min(2,window.devicePixelRatio||1),LW=640,LH=300;
+  cv.width=LW*dp;cv.height=LH*dp;const g=cv.getContext('2d');g.setTransform(dp,0,0,dp,0,0);
+  let s=7;const rnd=()=>(s=(s*16807)%2147483647)/2147483647;
+  const bg=g.createLinearGradient(0,0,0,LH);bg.addColorStop(0,'#0b1522');bg.addColorStop(.6,'#1b1822');bg.addColorStop(1,'#241219');g.fillStyle=bg;g.fillRect(0,0,LW,LH);
+  // far mall silhouette and glow of the horde side
+  const gl=g.createRadialGradient(480,150,10,480,150,260);gl.addColorStop(0,'#c8402a66');gl.addColorStop(1,'#c8402a00');g.fillStyle=gl;g.fillRect(0,0,LW,LH);
+  g.fillStyle='#0a1019';for(let i=0;i<12;i++){const w=40+rnd()*40,h=50+rnd()*70;g.fillRect(i*55-10,190-h,w,h)}
+  g.fillStyle='#ffd88a';for(let i=0;i<40;i++)if(rnd()>.6)g.fillRect(rnd()*LW,110+rnd()*70,3,4);
+  // floor
+  const fl=g.createLinearGradient(0,190,0,LH);fl.addColorStop(0,'#2a2f3b');fl.addColorStop(1,'#14171f');g.fillStyle=fl;g.fillRect(0,190,LW,LH-190);
+  g.strokeStyle='#ffffff10';g.lineWidth=1;for(let i=-4;i<16;i++){g.beginPath();g.moveTo(i*50+(i*50-320)*.0,190);g.lineTo(i*90-320,LH);g.stroke()}
+  // zombies (back to front)
+  const Z=[['giant',0,486,206,1.5],['walker',1,380,214,1],['runner',2,430,232,1.05],['crawler',0,350,248,.9],['santa',0,540,236,1.35],['walker',3,470,258,1.15],['sprinter',1,590,262,1.15],['bloater',0,395,268,1.1],['grinch',0,600,214,1.4]].sort((a,b)=>a[3]-b[3]);
+  for(const [t,v,x,y,sc] of Z){
+    g.fillStyle='#0007';g.beginPath();g.ellipse(x,y,22*sc,8*sc,0,0,TAU);g.fill();
+    try{const sp=zSprite(t,v,false);g.save();g.translate(x,y);g.scale(-sc*1.5,sc*1.5);g.drawImage(sp,-24,-70,48,72);g.restore()}catch(e){}
+  }
+  // survivors
+  const mine=chosenCharacter,others=[1,2,4,5,6,7,3,0].filter(i=>i!==mine).slice(0,3);
+  const crew=[[others[0],70,262],[others[1],150,232],[mine,205,266],[others[2],275,240]];
+  const tmp=document.createElement('canvas');tmp.width=120;tmp.height=100;
+  crew.sort((a,b)=>a[2]-b[2]);
+  for(const [ci,x,y] of crew){
+    const c=characters[ci];drawCharacterPreview(tmp,c);
+    g.fillStyle='#0008';g.beginPath();g.ellipse(x,y,20,7,0,0,TAU);g.fill();
+    g.drawImage(tmp,x-60*1.15,y-75*1.15,120*1.15,100*1.15);
+    // rifle + muzzle flash aimed at the horde
+    const gy=y-42*1.15;g.fillStyle='#202a33';g.fillRect(x+4,gy-3,40,6);g.fillStyle='#5b666b';g.fillRect(x+30,gy-2,22,4);
+    g.fillStyle='#ffe9a0';g.beginPath();g.moveTo(x+52,gy);g.lineTo(x+66,gy-6);g.lineTo(x+62,gy);g.lineTo(x+66,gy+6);g.closePath();g.fill();
+    g.strokeStyle='#ffec95aa';g.lineWidth=1.6;g.beginPath();g.moveTo(x+70,gy);g.lineTo(x+70+170+rnd()*60,gy-6+rnd()*14);g.stroke();
+  }
+  // snow + vignette
+  g.fillStyle='#ffffffaa';for(let i=0;i<70;i++)g.fillRect(rnd()*LW,rnd()*LH,1.6,1.6);
+  const vg=g.createRadialGradient(LW/2,LH/2,LH*.45,LW/2,LH/2,LW*.62);vg.addColorStop(0,'#0000');vg.addColorStop(1,'#000a');g.fillStyle=vg;g.fillRect(0,0,LW,LH);
+}
+
 let mmBg=null;
 const MMS=1.9,mmp=(x,y)=>[78+(x-y)*MMS,4+(x+y-world.y0)*MMS*.56];
 function drawMinimap(){
@@ -2628,7 +2679,8 @@ const escapeHTML=t=>String(t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>'
 const myName=()=>($('playerName').value.trim()||'Survivor').slice(0,16);
 function showScreen(id){
   curScreen=id;for(const el of document.querySelectorAll('.scr'))el.classList.toggle('on',el.id===id);
-  $('overlay').style.display='flex';
+  $('overlay').style.display='flex';$('panel').classList.toggle('title',id==='scrTitle');
+  if(id==='scrTitle')drawTitleArt($('titleArt'));
   const inGame=state==='playing'||state==='paused';
   $('hud').style.display=inGame?'block':'none';$('touch').classList.toggle('on',false);
 }
@@ -2709,7 +2761,7 @@ function lobbyDraw(){
   const allReady=netMembers.every(m=>m.ready||m.id===hostId);
   $('hostStart').style.display=netHost?'block':'none';$('hostStart').disabled=!allReady;
   $('hostStart').textContent=netMembers.length<2?'START (ALONE)':allReady?'START CO-OP':'WAITING FOR READY…';
-  $('netStatus').textContent=netHost?'Share the code or invite link. Up to 4 survivors.':'Waiting for the host to start.';
+  $('netStatus').textContent=netHost?'Share the code or invite link. Up to 8 survivors.':'Waiting for the host to start.';
 }
 function joinRoom(code){
   code=String(code||'').trim().toUpperCase();if(code.length<4){setStatus('Enter the room code');return}
@@ -2786,7 +2838,8 @@ function readInput(){
   inp.dy=(keys.s||keys.arrowdown?1:0)-(keys.w||keys.arrowup?1:0)+tMove.y+pad.ly;
   let fire=mouse.down||tAim.fire||pad.fire;
   inp.revive=!!keys.e||actHeld||pad.use;
-  if(aimSrc==='mouse'){const q=unproject(mouse.x,mouse.y);me.angle=Math.atan2(q.y-me.y,q.x-me.x)}
+  if(aimSrc==='mouse'){const q=unproject(mouse.x,mouse.y+.52*TILE); // bullets fly at chest height (z .52), so aim where the cursor sits at that height
+    me.angle=Math.atan2(q.y-me.y,q.x-me.x)}
   else{
     let a=null;
     if(aimSrc==='touch'&&tAim.id!==null&&Math.hypot(tAim.x,tAim.y)>.2)a=worldAngle(tAim.x,tAim.y);
@@ -2971,7 +3024,9 @@ $('volRange').addEventListener('input',e=>{settings.vol=e.target.value/100;saveS
 $('shakeChk').checked=settings.shake;$('shakeChk').addEventListener('change',e=>{settings.shake=e.target.checked;saveSettings()});
 $('lightChk').checked=settings.light;$('lightChk').addEventListener('change',e=>{settings.light=e.target.checked;saveSettings()});
 $('autoChk').checked=settings.autofire;$('autoChk').addEventListener('change',e=>{settings.autofire=e.target.checked;saveSettings()});
-$('playerName').value=settings.name||'';
+$('playerName').value=settings.name&&settings.name!=='Survivor'?settings.name:'';
+click('enterBtn',()=>showScreen('scrMain'));
+addEventListener('keydown',e=>{if(curScreen==='scrTitle'&&(e.key==='Enter'||e.key===' ')){e.preventDefault();unlockAudio();sfx('click');showScreen('scrMain')}});
 addEventListener('pointerdown',()=>unlockAudio(),{passive:true});
 
 // ---------------------------------------------------------------- main loop
@@ -3005,7 +3060,7 @@ addEventListener('resize',resize);
 if(window.visualViewport)visualViewport.addEventListener('resize',resize);
 resize();build();buildFloor();mainChars();
 $('ver').textContent='V41';$('bestLine').textContent=bestLine();
-showScreen('scrMain');
+showScreen(QUERY.get('room')?'scrMain':'scrTitle');
 if(location.protocol==='file:')setStatus('Solo works from this file. Online co-op needs the server (npm start).');
 const inviteCode=(QUERY.get('room')||'').toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,6);
 if(inviteCode){$('roomEntry').value=inviteCode;$('joinBox').classList.add('on');setStatus('You were invited to room '+inviteCode+'. Pick a survivor and press JOIN.')}
