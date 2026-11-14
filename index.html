@@ -603,6 +603,7 @@ function aTone(at,f0,f1,dur,vol,type='triangle',echo=false,pan=0){
 // name -> (time, volume, pan, arg)
 const SFX={
   gun0(t,v,p){aNoise(t,.075,.55*v,170,6500,true,p);aNoise(t+.006,.16,.15*v,60,1800,true,p);aTone(t,160,62,.10,.19*v,'sawtooth',true,p)},
+  gun6(t,v,p){aNoise(t,.05,.5*v,200,7000,true,p);aTone(t,230,90,.07,.22*v,'sawtooth',true,p);aTone(t+.012,95,60,.06,.16*v,'square',true,p)},
   gun1(t,v,p){aNoise(t,.075,.70*v,95,4600,true,p);aNoise(t+.006,.23,.24*v,60,1250,true,p);aTone(t,105,40,.14,.28*v,'sawtooth',true,p)},
   gun2(t,v,p){aNoise(t,.17,1.15*v,65,5900,true,p);aNoise(t+.018,.23,.75*v,45,2300,true,p);aTone(t,105,27,.26,.55*v,'sawtooth',true,p);aNoise(t+.12,.13,.24*v,90,1600,true,p);aNoise(t+.23,.14,.15*v,100,1200,true,p)},
   gun3(t,v,p){aNoise(t,.2,1.5*v,45,4600,true,p);aTone(t,90,20,.45,.95*v,'sine',true,p);aNoise(t+.04,.28,.9*v,150,2600,true,p);aNoise(t+.08,.9,.6*v,350,2800,true,p);aNoise(t+.3,.7,.35*v,500,2200,true,p);aTone(t+.02,380,90,.7,.22*v,'sawtooth',true,p)},
@@ -646,7 +647,7 @@ const SFX={
   rel3(t,v){aNoise(t,.065,.40*v,600,7000,true);aTone(t,1100,440,.075,.10*v,'triangle')},
   nuke(t,v){aNoise(t,1.4,1.2*v,20,900,true);aTone(t,200,18,1.5,.9*v,'sine',true);aTone(t,1800,200,.5,.2*v,'sawtooth',true)}
 };
-const SFX_GAP={gun0:.03,gun1:.03,gun2:.05,gun4:.07,hit:.04,squish:.045,boom:.05,bigBoom:.08,clang:.06,acid:.2,door:.08,spit:.1};
+const SFX_GAP={gun6:.045,gun0:.03,gun1:.03,gun2:.05,gun4:.07,hit:.04,squish:.045,boom:.05,bigBoom:.08,clang:.06,acid:.2,door:.08,spit:.1};
 function sfx(name,x,y){
   if(!aOK()||!SFX[name])return;
   const now=AU.ctx.currentTime,gap=SFX_GAP[name]||0;
@@ -767,7 +768,9 @@ const GUNS=[
   {name:'SHOTGUN',clip:8,rate:.32,dmg:30,speed:18,spread:.17,reload:2.1,pellets:9,pen:3,life:.34,kb:1.5,len:30,unlock:3},
   {name:'RPG',clip:1,rate:1,dmg:270,speed:11,spread:.01,reload:6.5,pellets:1,pen:1,life:1.8,kb:0,len:40,unlock:6,boom:3.2},
   {name:'FLAMER',clip:90,rate:.04,dmg:6,speed:9.5,spread:.2,reload:2.4,pellets:1,pen:99,life:.45,kb:0,len:30,unlock:8,flame:true},
-  {name:'RAILGUN',clip:5,rate:.85,dmg:300,speed:70,spread:0,reload:2.3,pellets:1,pen:14,life:.4,kb:2.2,len:46,unlock:11,rail:true}
+  {name:'RAILGUN',clip:5,rate:.85,dmg:300,speed:70,spread:0,reload:2.3,pellets:1,pen:14,life:.4,kb:2.2,len:46,unlock:11,rail:true},
+  // Boss drop: not part of the team arsenal. The pickup grants ~15 seconds of continuous fire.
+  {name:'MINIGUN',clip:0,rate:.031,dmg:19,speed:25,spread:.13,reload:0,pellets:1,pen:5,life:.8,kb:.9,len:50,unlock:9999}
 ];
 const PERKS={
   dmg:{n:'Hollow Points',d:'+20% damage',i:'💥',max:6},
@@ -811,7 +814,8 @@ const reloadMul=p=>Math.pow(.8,pk(p,'reload'));
 const clipOf=(p,w)=>Math.round(GUNS[w].clip*(1+.3*pk(p,'mag')));
 const moveSpeed=p=>PLAYER_SPEED*(1+.09*pk(p,'speed'));
 const owned=n=>!!(teamOwned>>n&1);
-const hasGun=(p,n)=>owned(n)&&!((p.gunLock||0)>>n&1); // a gun the Grinch took is locked for that player only
+const MINI=6,MINI_SECONDS=15;
+const hasGun=(p,n)=>n===MINI?p.ammo[MINI]>0:owned(n)&&!((p.gunLock||0)>>n&1); // a gun the Grinch took is locked for that player only
 let botCount=0;
 const isMulti=()=>netPlaying||botCount>0;
 const playerById=id=>players.find(p=>p.id===id);
@@ -856,6 +860,7 @@ function swapGun(p,dir=1){
 function tryShoot(p){
   if(p.hp<=0||p.knockdown>0||p.reload>0||p.cool>0)return;
   const w=p.weapon,g=GUNS[w];
+  if(w===MINI&&p.ammo[w]<=0){changeGun(p,0);say('MINIGUN EMPTY',p.x,p.y-1.4,'#ffb37a',1.2);return}
   if(p.ammo[w]<=0){startReload(p);return}
   p.cool=g.rate*rateMul(p);p.ammo[w]--;
   const kind=g.flame?1:g.boom?2:g.rail?3:0,mul=dmgMul(p);
@@ -1022,7 +1027,9 @@ function bossDeath(z){
   fx(['boom',r2(z.x),r2(z.y),3,3]);
   for(const p of players)if(p.hp>0)p.hp=p.maxHp;
   for(let i=0;i<3;i++)pickups.push({id:nextEid++,type:pick(['dmg','rapid','nade']),x:z.x+rand(-1,1),y:z.y+rand(-1,1),life:25});
+  for(let i=0,n=Math.max(1,Math.ceil(players.length/3));i<n;i++)pickups.push({id:nextEid++,type:'zmini',x:z.x+rand(-1.6,1.6),y:z.y+rand(-1.6,1.6),life:40});
   say('BOSS DOWN! FULL HEAL',z.x,z.y-2,'#9bffb5',3,20);
+  say('MINIGUN DROPPED!',z.x,z.y-3,'#ff9a5c',3,22);
 }
 function nearestPlayer(z){
   let bestP=null,bd=1e9;
@@ -1038,7 +1045,7 @@ function zombieStep(z,ax,ay,sp,dt){
 function grinchSteal(z,p){
   if(!z.stolen)z.stolen=[];
   let got=false;const w=p.weapon;
-  if(w>0&&hasGun(p,w)){ // holding something better than the AR: he takes the gun (the AR is never taken)
+  if(w>0&&w!==MINI&&hasGun(p,w)){ // holding something better than the AR: he takes the gun (the AR is never taken)
     p.gunLock=(p.gunLock||0)|(1<<w);changeGun(p,0);
     z.stolen.push({id:p.id,w});got=true;say('STOLE THE '+GUNS[w].name+'!',p.x,p.y-1.6,'#8dff9f',1.8,20);
   }else{
@@ -1046,7 +1053,7 @@ function grinchSteal(z,p){
     if(keys.length){
       const k=pick(keys);p.perks[k]--;if(!p.perks[k])delete p.perks[k];
       if(k==='hp'){p.maxHp=Math.max(100,p.maxHp-25);p.hp=Math.min(p.hp,p.maxHp)}
-      for(let i=0;i<p.ammo.length;i++)p.ammo[i]=Math.min(p.ammo[i],clipOf(p,i));
+      for(let i=0;i<p.ammo.length;i++)if(i!==MINI)p.ammo[i]=Math.min(p.ammo[i],clipOf(p,i));
       z.stolen.push({id:p.id,k});got=true;say('STOLE '+PERKS[k].n.toUpperCase()+'!',p.x,p.y-1.6,'#8dff9f',1.8,20);
     }
   }
@@ -1280,6 +1287,7 @@ function addBots(n){
 }
 function botGun(p,t,d,near,boss){
   let w=0;
+  if(hasGun(p,MINI))return MINI;
   if(boss&&hasGun(p,5))w=5;
   else if(boss&&hasGun(p,3)&&d>4)w=3;
   else if(near>=7&&hasGun(p,3)&&d>4.5)w=3;
@@ -1331,7 +1339,7 @@ function updateBots(dt){
     if(downed&&close===0){inp.revive=true}
     else{
       let g=null;
-      if(p.hp<p.maxHp*.5){let bd=12;for(const k of pickups)if(k.type[0]==='m'){const d=Math.hypot(k.x-p.x,k.y-p.y);if(d<bd&&los(p.x,p.y,k.x,k.y)){bd=d;g=[(k.x-p.x)/d,(k.y-p.y)/d]}}}
+      if(p.hp<p.maxHp*.5){let bd=12;for(const k of pickups)if(k.type==='medkit'||k.type==='medsmall'){const d=Math.hypot(k.x-p.x,k.y-p.y);if(d<bd&&los(p.x,p.y,k.x,k.y)){bd=d;g=[(k.x-p.x)/d,(k.y-p.y)/d]}}}
       if(!g){
         let cx=clamp(Math.floor(p.x/NAV),0,NW-1),cy=clamp(Math.floor((p.y-world.y0)/NAV),0,NH-1),fd=1e9;for(let ox=-1;ox<=1;ox++)for(let oy=-1;oy<=1;oy++){const nx=cx+ox,ny=cy+oy;if(nx>=0&&ny>=0&&nx<NW&&ny<NH)fd=Math.min(fd,mateNav[ny*NW+nx]*NAV+(ox||oy?.35:0))}
         const anyDown=players.some(q=>q.hp<=0),ring=anyDown?.5:2+(p.bi%4)*.55;
@@ -1391,6 +1399,9 @@ function updatePickups(dt){
       for(const q of players)q.ammo[n]=clipOf(q,n);
       changeGun(p,n);p.cool=.1;
       say((isMulti()?'TEAM UNLOCK: ':'')+GUNS[n].name+(isMulti()?'':' ACQUIRED!'),p.x,p.y-1.3,'#ffe18b',2);fx(['snd','weapon']);
+    }else if(k.type==='zmini'){
+      p.ammo[MINI]=Math.round(MINI_SECONDS/(GUNS[MINI].rate*rateMul(p)));p.weapon=MINI;p.reload=0;p.reloadTotal=0;p.cool=0;
+      say('MINIGUN! SHRED THEM!',p.x,p.y-1.4,'#ffb37a',2,22);fx(['snd','power']);
     }else if(k.type==='medkit'||k.type==='medsmall'){
       if(p.hp>=p.maxHp)continue;
       const heal=Math.min(p.maxHp-p.hp,k.type==='medkit'?p.maxHp:30);p.hp+=heal;p.damageVoicePlayed=p.hp<=p.maxHp*.5;
@@ -1417,7 +1428,7 @@ function choosePerk(p,i){
   const k=p.offer[i];p.offer=null;p.perks[k]=pk(p,k)+1;
   if(k==='hp'){p.maxHp+=25;if(p.hp>0)p.hp=Math.min(p.maxHp,p.hp+25)}
   if(k==='nade')p.grenades=Math.min(9,p.grenades+2);
-  if(k==='mag')for(let w=0;w<GUNS.length;w++)if(p.reload<=0||w!==p.weapon)p.ammo[w]=clipOf(p,w);
+  if(k==='mag')for(let w=0;w<GUNS.length;w++)if(w!==MINI&&(p.reload<=0||w!==p.weapon))p.ammo[w]=clipOf(p,w);
   fx(['perk',p.id,k]);
   if(intermission>3&&players.every(q=>!q.offer||q.gone))intermission=3;
 }
@@ -1446,7 +1457,7 @@ function nextWave(){
   const n=players.length,boss=wave%5===0;
   for(const p of players){
     if(p.offer)choosePerk(p,0);
-    if(p.hp>0)p.ammo[p.weapon]=clipOf(p,p.weapon),p.reload=0;
+    if(p.hp>0&&p.weapon!==MINI)p.ammo[p.weapon]=clipOf(p,p.weapon),p.reload=0;
     if(pk(p,'nade'))p.grenades=Math.min(9,p.grenades+pk(p,'nade'));
   }
   for(let i=1;i<GUNS.length;i++){
@@ -1851,7 +1862,7 @@ function playFx(ev){
       if(g.rail){const h=raycast(mx,my,a,40);beams.push({x0:mx,y0:my,x1:h.x,y1:h.y,life:.28,max:.28})}
       if(g.boom){smoke(mx,my,6,.25);smoke(x-Math.cos(a)*.9,y-Math.sin(a)*.9,6,.45);burst(x-Math.cos(a)*.7,y-Math.sin(a)*.7,10,['#ffd35a','#ff9a3c','#8a8a8a'],5,.35,4)}
       sfx('gun'+w,x,y);
-      if(p===me){addShake(w===2?4.5:w===5?6:w===3?9:w===4?.6:1.6);if(COARSE&&navigator.vibrate&&w!==4&&w!==1&&w!==0)navigator.vibrate(12)}
+      if(p===me){addShake(w===6?.9:w===2?4.5:w===5?6:w===3?9:w===4?.6:1.6);if(COARSE&&navigator.vibrate&&w!==4&&w!==1&&w!==0)navigator.vibrate(12)}
       break}
     case 'txt':texts.push({text:ev[1],x:ev[2],y:ev[3],z:1.5,life:ev[5],max:ev[5],color:ev[4],size:ev[6]||18});break;
     case 'dmg':
@@ -2222,6 +2233,10 @@ function drawGun(w,hand,reloading,progress){
   if(w===3){ctx.fillStyle='#3d4a3a';ctx.fillRect(-4,-5,38,10);ctx.fillStyle='#232b22';ctx.fillRect(-9,-7,7,14);ctx.fillRect(30,-6,6,12);ctx.fillStyle='#6b7a55';ctx.fillRect(10,-6,7,12);ctx.fillStyle='#14181a';ctx.fillRect(18,-9,6,4);
     if(!(reloading&&progress<.7)){ctx.fillStyle='#8a3a2f';ctx.beginPath();ctx.ellipse(37,0,7,6,0,0,TAU);ctx.fill();ctx.fillStyle='#c9c9c9';ctx.beginPath();ctx.moveTo(41,-3);ctx.lineTo(48,0);ctx.lineTo(41,3);ctx.fill()}}
   else if(w===4){ctx.fillStyle='#8a2f24';ctx.fillRect(-2,3,14,10);ctx.fillStyle='#2b2f33';ctx.fillRect(4,-4,26,8);ctx.fillStyle='#55595c';ctx.fillRect(26,-2,12,4);ctx.fillStyle='#ffb04a';ctx.fillRect(37,-2,3,4)}
+  else if(w===6){ // minigun: spinning barrel cluster
+    ctx.fillStyle='#2a3036';ctx.fillRect(-4,-5,22,10);ctx.fillStyle='#d8481f';ctx.fillRect(-9,-4,6,8);ctx.fillStyle='#3a424a';ctx.fillRect(16,-6,10,12);
+    const sp=Math.floor(clock*40)%3;for(let i=0;i<3;i++){ctx.fillStyle=(i+sp)%3===0?'#c3cbd1':'#6f7981';ctx.fillRect(24,-6+i*4.3,28,2.8)}
+    ctx.fillStyle='#161a1e';ctx.fillRect(50,-7,3,14);ctx.fillStyle='#ffb04a';ctx.fillRect(8,5,12,6)}
   else if(w===5){ctx.fillStyle='#1c2733';ctx.fillRect(4,-4,34,8);ctx.fillStyle='#5fd9ff';ctx.fillRect(12,-1.5,34,3);ctx.fillStyle='#2f4356';ctx.fillRect(34,-5,4,10);ctx.fillRect(42,-5,4,10)}
   else{
     ctx.fillStyle=w===2?'#50301c':'#202a33';ctx.fillRect(4,-4,w===1?35:30,8);
@@ -2344,12 +2359,17 @@ function drawZombie(z,falling){
 }
 
 // ---------------------------------------------------------------- pickups & projectiles
-const PICK_GLOW={medkit:'#56ff99',medsmall:'#56ff99',dmg:'#ff9d5c',rapid:'#7fd8ff',nuke:'#fff3a0',nade:'#cfe58a'};
+const PICK_GLOW={zmini:'#ff8a3c',medkit:'#56ff99',medsmall:'#56ff99',dmg:'#ff9d5c',rapid:'#7fd8ff',nuke:'#fff3a0',nade:'#cfe58a'};
 function drawPickup(p){
   if(p.life!=null&&p.life<5&&Math.sin(clock*16)>.2)return;
   const q=project(p.x,p.y,.14+Math.sin(clock*3+p.id)*.06);if(!onScreen(q,30))return;
   ctx.save();ctx.translate(q.x,q.y);
   if(p.type==='medkit'||p.type==='medsmall'){const s=p.type==='medkit'?1:.68;ctx.scale(s,s);ctx.fillStyle='#f4f7ee';ctx.fillRect(-12,-10,24,20);ctx.fillStyle='#d83d49';ctx.fillRect(-3,-8,6,16);ctx.fillRect(-9,-3,18,6)}
+  else if(p.type==='zmini'){
+    const gl=ctx.createRadialGradient(0,0,2,0,0,26);gl.addColorStop(0,'rgba(255,140,60,.55)');gl.addColorStop(1,'rgba(255,140,60,0)');ctx.fillStyle=gl;ctx.fillRect(-26,-26,52,52);
+    ctx.rotate(-.25);ctx.fillStyle='#2c3238';ctx.fillRect(-22,-5,40,10);ctx.fillStyle='#8c949b';for(let i=0;i<3;i++)ctx.fillRect(4,-6+i*4.5,22,2.6);ctx.fillStyle='#d8481f';ctx.fillRect(-26,-3,6,6);ctx.fillStyle='#ffb04a';ctx.fillRect(-8,5,12,6);
+    ctx.rotate(.25);ctx.fillStyle='#ffd8a8';ctx.font='900 10px system-ui';ctx.textAlign='center';ctx.fillText('MINIGUN',0,-17);
+  }
   else if(p.type[0]==='w'){
     const n=Number(p.type[1]);ctx.rotate(-.3);ctx.fillStyle='#343a40';ctx.fillRect(-23,-4,45,8);ctx.fillStyle=['','#555c63','#9d653b','#4f6b45','#b0402f','#49c6ee'][n];ctx.fillRect(-9,3,18,8);ctx.fillStyle='#e0b36c';ctx.fillRect(12,-6,7,12);
     ctx.rotate(.3);ctx.fillStyle='#ffe18b';ctx.font='900 10px system-ui';ctx.textAlign='center';ctx.fillText(GUNS[n].name,0,-14);
@@ -2623,7 +2643,7 @@ function drawScreenFx(dt){
   if(nukeFlash>0){ctx.fillStyle=`rgba(255,250,220,${nukeFlash*.85})`;ctx.fillRect(0,0,W,H)}
   if(state!=='playing')return;
   // off-screen pointers
-  for(const k of pickups)if(k.type[0]==='w')arrow(k.x,k.y,'#ffd447',GUNS[Number(k.type[1])].name);else if(k.type==='medkit'&&me&&me.hp<me.maxHp*.6)arrow(k.x,k.y,'#63e6a2','AID');
+  for(const k of pickups)if(k.type[0]==='w')arrow(k.x,k.y,'#ffd447',GUNS[Number(k.type[1])].name);else if(k.type==='zmini')arrow(k.x,k.y,'#ff9a5c','MINIGUN');else if(k.type==='medkit'&&me&&me.hp<me.maxHp*.6)arrow(k.x,k.y,'#63e6a2','AID');
   for(const p of players)if(p!==me&&p.hp<=0)arrow(p.x,p.y,'#ff8a8a',p.name);
   if(spawnLeft===0&&zombies.length<=4)for(const z of zombies)arrow(z.x,z.y,'#ff5a5a');
   for(const z of zombies)if(ZT[z.t].boss)arrow(z.x,z.y,'#ff5a5a','BOSS');else if(z.t==='carrier')arrow(z.x,z.y,'#ffd447','LOOT');
@@ -3068,10 +3088,11 @@ function hudUpdate(){
   const boss=zombies.find(z=>ZT[z.t].boss);
   $('bossWrap').style.display=boss&&state==='playing'?'block':'none';
   if(boss){setText('bossName',ZT[boss.t].label);$('bossFill').style.transform=`scaleX(${clamp(boss.hp/boss.maxHp,0,1)})`}
-  setHTML('slots',GUNS.map((g,i)=>`<span class="slot${hasGun(me,i)?' own':''}${i===me.weapon?' cur':''}">${i+1} ${hasGun(me,i)?g.name:owned(i)?'STOLEN':'?'}</span>`).join(''));
+  setHTML('slots',GUNS.map((g,i)=>i===6&&!hasGun(me,6)?'':`<span class="slot${hasGun(me,i)?' own':''}${i===me.weapon?' cur':''}">${i+1} ${hasGun(me,i)?g.name:owned(i)?'STOLEN':'?'}</span>`).join(''));
   const clip=clipOf(me,me.weapon),am=me.ammo[me.weapon];
-  setText('ammoBig',me.reload>0?'RELOADING':(COARSE?GUNS[me.weapon].name+' ':'')+am+' / '+clip);
-  $('ammoBig').className=me.reload<=0&&am<=clip*.2?'low':'';
+  if(me.weapon===MINI){const sec=am*GUNS[MINI].rate*rateMul(me);setText('ammoBig','MINIGUN '+sec.toFixed(1)+'s');$('ammoBig').className=sec<3?'low':''}
+  else{setText('ammoBig',me.reload>0?'RELOADING':(COARSE?GUNS[me.weapon].name+' ':'')+am+' / '+clip);
+  $('ammoBig').className=me.reload<=0&&am<=clip*.2?'low':''}
   setHTML('subInfo',`<span>💣 ${me.grenades}</span><span style="color:${me.dashCd>0?'#ffffff66':'#9fe3ff'}">DASH ${me.dashCd>0?'…':'READY'}</span>`);
   // perk draft
   const of=me.offer&&state==='playing'?me.offer.join(','):'';
