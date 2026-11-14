@@ -1288,6 +1288,7 @@ function updateBots(dt){
       if(p.grenades>0&&p.nadeCd<=0&&td>3&&td<8&&(near>=5||(boss&&Math.random()<.01))&&p.bnade<=0){throwNade(p,t.x,t.y);p.bnade=2.5}
     }else if(p.reload<=0&&p.ammo[p.weapon]<clipOf(p,p.weapon)*.5&&nd>5)startReload(p);
     // where to go
+    if(officeDoor.solid&&!(officeDoor.broken>0)&&nearDoor(p)&&Math.hypot(me.x-2.35,me.y-21.35)<7&&(p.bdoor=(p.bdoor||0)-dt)<=0){interact(p);p.bdoor=2}
     let wx=0,wy=0,goalD=0;
     const downed=players.find(q=>q!==p&&q.hp<=0&&Math.hypot(q.x-p.x,q.y-p.y)<1.3);
     if(downed&&close===0){inp.revive=true}
@@ -1295,15 +1296,21 @@ function updateBots(dt){
       let g=null;
       if(p.hp<p.maxHp*.5){let bd=12;for(const k of pickups)if(k.type[0]==='m'){const d=Math.hypot(k.x-p.x,k.y-p.y);if(d<bd&&los(p.x,p.y,k.x,k.y)){bd=d;g=[(k.x-p.x)/d,(k.y-p.y)/d]}}}
       if(!g){
-        const cx=clamp(Math.floor(p.x/NAV),0,NW-1),cy=clamp(Math.floor((p.y-world.y0)/NAV),0,NH-1),fd=mateNav[cy*NW+cx]*NAV;
+        let cx=clamp(Math.floor(p.x/NAV),0,NW-1),cy=clamp(Math.floor((p.y-world.y0)/NAV),0,NH-1),fd=1e9;for(let ox=-1;ox<=1;ox++)for(let oy=-1;oy<=1;oy++){const nx=cx+ox,ny=cy+oy;if(nx>=0&&ny>=0&&nx<NW&&ny<NH)fd=Math.min(fd,mateNav[ny*NW+nx]*NAV+(ox||oy?.35:0))}
         const anyDown=players.some(q=>q.hp<=0),ring=anyDown?.5:2+(p.bi%4)*.55;
-        if(fd<1e6&&fd>ring){const tgt=anyDown?players.find(q=>q.hp<=0):me,dd=dirFrom(mateNav,p,tgt);if(dd)g=dd}
+        if(fd>ring){
+          const tgt=anyDown?players.find(q=>q.hp<=0):me,dd=fd<1e6?dirFrom(mateNav,p,tgt):null;
+          if(dd)g=dd;else{const d=Math.hypot(tgt.x-p.x,tgt.y-p.y)||1;g=[(tgt.x-p.x)/d,(tgt.y-p.y)/d]}
+        }
       }
       if(g){wx+=g[0];wy+=g[1]}
       if(close){const m=Math.hypot(fx_,fy_)||1;wx=wx*.35+fx_/m*1.5;wy=wy*.35+fy_/m*1.5}
       for(const q of players){if(q===p||q.hp<=0)continue;const dx=p.x-q.x,dy=p.y-q.y,d=Math.hypot(dx,dy);if(d<.9&&d>.001){wx+=dx/d*.6;wy+=dy/d*.6}}
       if(close>=3&&nd<1.1&&p.dashCd<=0&&Math.hypot(fx_,fy_)>0)tryDash(p,fx_,fy_);
     }
+    p.bsx=p.bsx==null?p.x:p.bsx;p.bst=(p.bst||0)+dt;p.bjit=Math.max(0,(p.bjit||0)-dt);
+    if(p.bst>=1){const wantMove=Math.hypot(wx,wy)>.3&&!inp.revive;if(wantMove&&Math.hypot(p.x-p.bsx,p.y-(p.bsy||0))<.4){p.bjit=.9;p.bja=Math.random()*TAU}p.bsx=p.x;p.bsy=p.y;p.bst=0}
+    if(p.bjit>0){wx=wx*.4+Math.cos(p.bja);wy=wy*.4+Math.sin(p.bja)}
     const m=Math.hypot(wx,wy);
     if(m>.05){wx/=Math.max(1,m);wy/=Math.max(1,m);inp.dx=(wx-wy)*Math.SQRT1_2;inp.dy=(wx+wy)*Math.SQRT1_2;if(!t)p.angle=Math.atan2(wy,wx)}
   }
