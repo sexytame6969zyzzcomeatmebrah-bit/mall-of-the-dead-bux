@@ -236,7 +236,7 @@ p{color:#d5e0e9;line-height:1.45;margin:8px 0;font-size:13px}
     </div>
     <!-- MAIN -->
     <div class="scr" id="scrMain">
-      <h1>MALL OF THE DEAD <small id="ver">V50</small></h1>
+      <h1>MALL OF THE DEAD <small id="ver">V51</small></h1>
       <p class="tag">CHRISTMAS AT THE MALL. The power is out, the doors are open and the horde is coming for the tree.</p>
       <div class="chars" id="characters" aria-label="Choose your survivor"></div>
       <input id="playerName" placeholder="Write your name" maxlength="16" autocomplete="off">
@@ -901,7 +901,7 @@ function initAudio(){
     if(!AU.ctx){
       const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;
       const c=AU.ctx=new AC({latencyHint:'interactive'});
-      const comp=c.createDynamicsCompressor();comp.threshold.value=-16;comp.ratio.value=5;comp.connect(c.destination);
+      const comp=c.createDynamicsCompressor();comp.threshold.value=-10;comp.ratio.value=3;comp.knee.value=12;comp.attack.value=.003;comp.release.value=.12;comp.connect(c.destination);
       AU.master=c.createGain();AU.master.gain.value=masterVol();AU.master.connect(comp);
       AU.dry=c.createGain();AU.dry.gain.value=.94;AU.dry.connect(AU.master);
       const wet=c.createGain();wet.gain.value=.16;wet.connect(AU.master);
@@ -998,11 +998,16 @@ const SFX={
   nuke(t,v){aNoise(t,1.4,1.2*v,20,900,true);aTone(t,200,18,1.5,.9*v,'sine',true);aTone(t,1800,200,.5,.2*v,'sawtooth',true)}
 };
 const SFX_GAP={gun6:.045,gun0:.03,gun1:.03,gun2:.05,gun4:.07,hit:.04,squish:.045,boom:.05,bigBoom:.08,clang:.06,acid:.2,door:.08,spit:.1};
+const SFX_LIGHT={hit:1,squish:1,spit:1,acid:1,clang:1,dash:1,throw:1,thump:1};
 function sfx(name,x,y){
   if(!aOK()||!SFX[name])return;
   const now=AU.ctx.currentTime,gap=SFX_GAP[name]||0;
   if(gap&&AU.last[name]&&now-AU.last[name]<gap)return;
   AU.last[name]=now;
+  if(SFX_LIGHT[name]){ // minor sounds yield when the mix is already crowded, so gunfire never gets squeezed out
+    AU.busy=AU.busy||[];while(AU.busy.length&&now-AU.busy[0]>.12)AU.busy.shift();
+    if(AU.busy.length>=5)return;AU.busy.push(now);
+  }
   let v=1,pan=0;
   if(x!=null&&me){
     const d=Math.hypot(x-me.x,y-me.y);if(d>30)return;
@@ -1035,37 +1040,49 @@ function charVoice(p,kind){
 
 // ---- tech counter radio (the original recording), filtered like a small speaker and positional
 let RADIO_X=8.65,RADIO_Y=2.65;const RADIO_REACH=2.15;
-let techRadio=null,radioGain=null,radioWired=false;
+let radioGain=null,radioChain=null;const radioEls=[];
 const RADIO_KEYS=['radio','radio2','radio3'];
 function radioVolume(){
   if(!me)return 0;
   const d=Math.hypot(me.x-RADIO_X,me.y-RADIO_Y);
   return clamp(.07-d*.0035,.012,.07)*(AU.muted?0:settings.vol/.8);
 }
-function wireRadio(){
-  if(radioWired||!ASSETS.radio)return;radioWired=true;
-  techRadio=new Audio(ASSETS[RADIO_KEYS[radioTrack]]||ASSETS.radio);techRadio._k=radioTrack;techRadio.loop=true;techRadio.preload='none';techRadio.volume=.03;
+// Each song gets its own element (made on first use, from a blob URL so it streams instead of re-decoding a huge data URI),
+// all feeding one shared speaker-style filter chain.
+function radioBlob(k){
+  const uri=ASSETS[k];
+  try{const s=atob(uri.split(',')[1]),u=new Uint8Array(s.length);for(let i=0;i<s.length;i++)u[i]=s.charCodeAt(i);return URL.createObjectURL(new Blob([u],{type:'audio/mpeg'}))}catch(e){return uri}
+}
+function radioEl(i){
+  if(radioEls[i])return radioEls[i];
+  const k=RADIO_KEYS[i];if(!ASSETS[k])return null;
+  const el=new Audio(radioBlob(k));el.loop=true;el.preload='auto';el.volume=.03;
   try{
-    if(!AU.ctx)return;
-    const c=AU.ctx,src=c.createMediaElementSource(techRadio);
-    const high=c.createBiquadFilter();high.type='highpass';high.frequency.value=430;
-    const low=c.createBiquadFilter();low.type='lowpass';low.frequency.value=2900;
-    const drive=c.createWaveShaper(),curve=new Float32Array(2048);
-    for(let i=0;i<curve.length;i++){const x=i*2/(curve.length-1)-1;curve[i]=Math.tanh(x*2.2)/Math.tanh(2.2)}
-    drive.curve=curve;drive.oversample='2x';
-    radioGain=c.createGain();radioGain.gain.value=.03;techRadio.volume=1;
-    src.connect(high);high.connect(low);low.connect(drive);drive.connect(radioGain);radioGain.connect(c.destination);
-  }catch(e){radioGain=null;techRadio.volume=.03}
+    if(AU.ctx){
+      const c=AU.ctx;
+      if(!radioChain){
+        const high=c.createBiquadFilter();high.type='highpass';high.frequency.value=430;
+        const low=c.createBiquadFilter();low.type='lowpass';low.frequency.value=2900;
+        const drive=c.createWaveShaper(),curve=new Float32Array(2048);
+        for(let n=0;n<curve.length;n++){const x=n*2/(curve.length-1)-1;curve[n]=Math.tanh(x*2.2)/Math.tanh(2.2)}
+        drive.curve=curve;drive.oversample='2x';
+        radioGain=c.createGain();radioGain.gain.value=.03;
+        high.connect(low);low.connect(drive);drive.connect(radioGain);radioGain.connect(c.destination);radioChain=high;
+      }
+      c.createMediaElementSource(el).connect(radioChain);el.volume=1;el._w=true;
+    }
+  }catch(e){}
+  return radioEls[i]=el;
 }
 function syncRadio(){
   const want=radioOn&&state==='playing';
   if(want){
-    if(!techRadio){initAudio();wireRadio()}
-    if(!techRadio)return;
-    if(techRadio._k!==radioTrack&&ASSETS[RADIO_KEYS[radioTrack]]){techRadio._k=radioTrack;techRadio.src=ASSETS[RADIO_KEYS[radioTrack]];techRadio.loop=true}
-    if(techRadio.paused){const p=techRadio.play();if(p&&p.catch)p.catch(()=>{})}
-    const v=radioVolume();if(radioGain)radioGain.gain.value=v;else techRadio.volume=clamp(v,0,1);
-  }else if(techRadio&&!techRadio.paused)techRadio.pause();
+    if(!AU.ctx)initAudio();
+    const el=radioEl(radioTrack);if(!el)return;
+    for(const o of radioEls)if(o&&o!==el&&!o.paused)o.pause();
+    if(el.paused){const p=el.play();if(p&&p.catch)p.catch(()=>{})}
+    const v=radioVolume();if(el._w&&radioGain)radioGain.gain.value=v;else el.volume=clamp(v,0,1);
+  }else for(const o of radioEls)if(o&&!o.paused)o.pause();
 }
 
 // ---- one quiet looping horde bed rather than a source per zombie
