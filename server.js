@@ -121,7 +121,7 @@ wss.on('connection',ws=>{
         else send(ws,{t:'error',message:'Character already taken'});
       }else if(msg.t==='ready'){member.ready=!!msg.ready;lobby(room)}
       else if(msg.t==='start'&&isHost&&room.members.every(m=>m.ready||m===member)){
-        room.started=true;room.map=['metro','city'].includes(msg.map)?msg.map:'mall';room.wave=Math.max(1,Math.min(100,Math.floor(Number(msg.wave))||1));
+        room.started=true;room.map=['metro','city','dust'].includes(msg.map)?msg.map:'mall';room.wave=Math.max(1,Math.min(100,Math.floor(Number(msg.wave))||1));
         broadcast(room,{t:'begin',host:member.id,members:room.members.map(publicMember),wave:room.wave,map:room.map});
         lobby(room);
       }
