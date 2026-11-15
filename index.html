@@ -236,7 +236,7 @@ p{color:#d5e0e9;line-height:1.45;margin:8px 0;font-size:13px}
     </div>
     <!-- MAIN -->
     <div class="scr" id="scrMain">
-      <h1>MALL OF THE DEAD <small id="ver">V57</small></h1>
+      <h1>MALL OF THE DEAD <small id="ver">V58</small></h1>
       <p class="tag">CHRISTMAS AT THE MALL. The power is out, the doors are open and the horde is coming for the tree.</p>
       <div class="chars" id="characters" aria-label="Choose your survivor"></div>
       <input id="playerName" placeholder="Write your name" maxlength="16" autocomplete="off">
@@ -944,7 +944,7 @@ function aTone(at,f0,f1,dur,vol,type='triangle',echo=false,pan=0){
 }
 // name -> (time, volume, pan, arg)
 const SFX={
-  gun0(t,v,p){aNoise(t,.075,.55*v,170,6500,true,p);aNoise(t+.006,.16,.15*v,60,1800,true,p);aTone(t,160,62,.10,.19*v,'sawtooth',true,p)},
+  gun0(t,v,p){aNoise(t,.05,.5*v,300,8000,true,p);aNoise(t+.004,.1,.12*v,90,2400,true,p);aTone(t,230,90,.07,.17*v,'sawtooth',true,p)},
   // minigun: sub-bass thump + hard crack + metallic rattle, so it feels like a different class of weapon
   gun6(t,v,p){aNoise(t,.07,.7*v,220,9000,true,p);aTone(t,160,46,.1,.42*v,'sawtooth',true,p);aTone(t,62,36,.14,.38*v,'sine',false,p);aTone(t+.004,520+Math.random()*90,260,.045,.13*v,'square',false,p)},
   // spin-up whine when you grab / select it, ending in a heavy lock-and-load clunk
@@ -1233,7 +1233,7 @@ function updateMiniSynth(dt,t,firing){
 //  through fx(), so co-op guests see and hear exactly what the host does.
 // ============================================================================
 const GUNS=[
-  {name:'AR',clip:40,rate:.095,dmg:22,speed:22,spread:.06,reload:1.45,pellets:1,pen:1,life:.9,kb:.5,len:30,unlock:0},
+  {name:'UZI',clip:32,rate:.06,dmg:17,speed:22,spread:.1,reload:1.2,pellets:1,pen:1,life:.8,kb:.35,len:24,unlock:0},
   {name:'LMG',clip:120,rate:.075,dmg:22,speed:22,spread:.07,reload:2.9,pellets:1,pen:1,life:.9,kb:.5,len:44,unlock:2},
   {name:'SHOTGUN',clip:8,rate:.32,dmg:30,speed:18,spread:.17,reload:2.1,pellets:9,pen:3,life:.34,kb:1.5,len:30,unlock:3},
   {name:'RPG',clip:1,rate:1,dmg:270,speed:11,spread:.01,reload:6.5,pellets:1,pen:1,life:1.8,kb:0,len:40,unlock:6,boom:3.2},
@@ -1341,7 +1341,7 @@ function changeGun(p,n){
   if(n===MINI){if(p.ammo[MINI]<=0)p.ammo[MINI]=Math.round(MINI_SECONDS/(GUNS[MINI].rate*rateMul(p)));fx(['snd','miniSpin',r2(p.x),r2(p.y)])}
   p.weapon=n;p.reload=0;p.reloadTotal=0;p.reloadStage=0;p.magKills=0;p.shouted=false;p.cool=Math.max(p.cool,.14);p.mwind=0;p.mgrace=0;
 }
-// L: drop the gun in your hands (not the starting AR, not the minigun). It is locked for you until you pick it up again.
+// L: drop the gun in your hands (not the starting Uzi, not the minigun). It is locked for you until you pick it up again.
 function dropGun(p){
   const w=p.weapon;if(!p||p.hp<=0||w===0||w===MINI||!hasGun(p,w))return;
   let x=p.x+Math.cos(p.angle)*1.0,y=p.y+Math.sin(p.angle)*1.0;if(collision(x,y,.25)){x=p.x;y=p.y}
@@ -1550,7 +1550,7 @@ function zombieStep(z,ax,ay,sp,dt){
 function grinchSteal(z,p){
   if(!z.stolen)z.stolen=[];
   let got=false;const w=p.weapon;
-  if(w>0&&w!==MINI&&hasGun(p,w)){ // holding something better than the AR: he takes the gun (the AR is never taken)
+  if(w>0&&w!==MINI&&hasGun(p,w)){ // holding something better than the Uzi: he takes the gun (the Uzi is never taken)
     p.gunLock=(p.gunLock||0)|(1<<w);changeGun(p,0);
     z.stolen.push({id:p.id,w});got=true;say('STOLE THE '+GUNS[w].name+'!',p.x,p.y-1.6,'#8dff9f',1.8,20);
   }else{
@@ -2770,6 +2770,9 @@ function drawGun(w,hand,reloading,progress){
   ctx.fillStyle=hand;ctx.fillRect(3,-7,12,5);ctx.fillRect(3,4,12,5);
   if(w===3){ctx.fillStyle='#3d4a3a';ctx.fillRect(-4,-5,38,10);ctx.fillStyle='#232b22';ctx.fillRect(-9,-7,7,14);ctx.fillRect(30,-6,6,12);ctx.fillStyle='#6b7a55';ctx.fillRect(10,-6,7,12);ctx.fillStyle='#14181a';ctx.fillRect(18,-9,6,4);
     if(!(reloading&&progress<.7)){ctx.fillStyle='#8a3a2f';ctx.beginPath();ctx.ellipse(37,0,7,6,0,0,TAU);ctx.fill();ctx.fillStyle='#c9c9c9';ctx.beginPath();ctx.moveTo(41,-3);ctx.lineTo(48,0);ctx.lineTo(41,3);ctx.fill()}}
+  else if(w===0){ // uzi: compact boxy receiver, short barrel, stick magazine, wire stock
+    ctx.fillStyle='#1d2126';ctx.fillRect(2,-4.5,22,9);ctx.fillStyle='#363d44';ctx.fillRect(4,-4.5,18,3);ctx.fillStyle='#14171a';ctx.fillRect(24,-2,9,4);
+    ctx.fillStyle='#2b3036';ctx.fillRect(9,4,5,11);ctx.fillStyle='#8c949a';ctx.fillRect(-7,-1,9,1.6);ctx.fillRect(-7,2,9,1.6);ctx.fillStyle='#ffb04a';ctx.fillRect(18,-5.5,2,1.5)}
   else if(w===4){ctx.fillStyle='#8a2f24';ctx.fillRect(-2,3,14,10);ctx.fillStyle='#2b2f33';ctx.fillRect(4,-4,26,8);ctx.fillStyle='#55595c';ctx.fillRect(26,-2,12,4);ctx.fillStyle='#ffb04a';ctx.fillRect(37,-2,3,4)}
   else if(w===6){ // minigun: spinning barrel cluster
     ctx.fillStyle='#2a3036';ctx.fillRect(-4,-5,22,10);ctx.fillStyle='#d8481f';ctx.fillRect(-9,-4,6,8);ctx.fillStyle='#3a424a';ctx.fillRect(16,-6,10,12);
@@ -4435,7 +4438,7 @@ try{
 addEventListener('resize',resize);
 if(window.visualViewport)visualViewport.addEventListener('resize',resize);
 resize();build();buildFloor();mainChars();
-$('ver').textContent='V57';$('bestLine').textContent=bestLine();
+$('ver').textContent='V58';$('bestLine').textContent=bestLine();
 showScreen(QUERY.get('room')?'scrMain':'scrTitle');
 if(location.protocol==='file:')setStatus('Solo works from this file. Online co-op needs the server (npm start).');
 const inviteCode=(QUERY.get('room')||'').toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,6);
