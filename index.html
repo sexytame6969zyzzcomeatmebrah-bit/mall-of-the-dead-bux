@@ -176,6 +176,34 @@ p{color:#d5e0e9;line-height:1.45;margin:8px 0;font-size:13px}
 #chatLog div.fade{opacity:0}
 #chatBox{display:none;pointer-events:auto;width:230px;box-sizing:border-box;padding:7px 9px;border-radius:7px;border:1px solid #ffd98a99;background:#0b1420ee;color:#fff;font:13px system-ui}
 
+/* ---- mode picker + Tower Defense HUD */
+.modePick{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:6px 0 2px}
+.modeChoice{padding:8px 6px;background:#233646;border:2px solid #526475;border-radius:12px;color:#fff;text-align:center;min-width:0}
+.modeChoice b{display:block;font-size:13px;letter-spacing:.08em}
+.modeChoice span{display:block;font-size:10px;opacity:.75;margin-top:2px}
+.modeChoice.selected{border-color:#f9c85d;background:#3e4d4d;box-shadow:0 0 0 2px #f9c85d44}
+#tdHud{display:none}
+body.td #tdHud{display:block}
+body.td #slots{display:none}
+#tdTop{position:absolute;left:50%;top:calc(max(12px,env(safe-area-inset-top)) + 70px);transform:translateX(-50%);display:flex;gap:10px;align-items:stretch;pointer-events:none}
+.tdCar{width:150px;background:#0b1520cc;border:1px solid #ffffff22;border-radius:10px;padding:4px 8px;font-size:10px;font-weight:900;letter-spacing:.06em;color:#fff}
+.tdCar i{display:block;height:7px;border-radius:4px;background:#6fe38a;margin-top:3px;transform-origin:left;transition:transform .15s}
+.tdCar.dead{opacity:.55;color:#ff8a7a}
+#tdMoney{background:#1d3a22dd;border:1px solid #7dff8a66;border-radius:10px;padding:4px 14px;font-size:20px;font-weight:900;color:#b9ffc4;display:flex;align-items:center}
+#tdPhase{position:absolute;left:50%;top:calc(max(12px,env(safe-area-inset-top)) + 118px);transform:translateX(-50%);font-weight:900;font-size:13px;letter-spacing:.08em;color:#ffe17a;text-shadow:0 2px 4px #000;pointer-events:none;text-align:center;white-space:nowrap}
+#tdBar{position:absolute;left:12px;top:156px;display:flex;flex-direction:column;gap:5px}
+.tdSlot{width:150px;background:#0b1520dd;border:2px solid #526475;border-radius:10px;padding:5px 6px;color:#fff;font-size:10px;font-weight:800;line-height:1.25;cursor:pointer;text-align:left}
+.tdSlot b{display:block;font-size:11px;color:#ffe17a}
+.tdSlot em{font-style:normal;color:#9bffb5;font-size:12px}
+.tdSlot.sel{border-color:#f9c85d;background:#3e4d4d;box-shadow:0 0 0 2px #f9c85d55}
+.tdSlot.poor{opacity:.5}
+#tdPanel{position:absolute;left:174px;top:156px;width:290px;background:#0b1520ee;border:1px solid #ffffff30;border-radius:12px;padding:9px 11px;color:#fff;font-size:12px;display:none}
+#tdPanel h4{margin:0 0 3px;font-size:13px;letter-spacing:.06em;color:#ffe17a}
+#tdPanel p{margin:2px 0;opacity:.85}
+#tdPanel .btns{display:flex;gap:6px;margin-top:7px}
+#tdPanel button{flex:1;padding:6px 4px;font-size:11px;border-radius:8px}
+#tdBar,#tdPanel{pointer-events:auto}
+
 </style>
 </head>
 <body>
@@ -211,6 +239,7 @@ p{color:#d5e0e9;line-height:1.45;margin:8px 0;font-size:13px}
     <div id="subInfo"></div>
   </div>
   <div id="perks"></div>
+  <div id="tdHud"><div id="tdTop"></div><div id="tdPhase"></div><div id="tdPanel"></div><div id="tdBar"></div></div>
 </div>
 
 <div id="touch">
@@ -236,10 +265,11 @@ p{color:#d5e0e9;line-height:1.45;margin:8px 0;font-size:13px}
     </div>
     <!-- MAIN -->
     <div class="scr" id="scrMain">
-      <h1>MALL OF THE DEAD <small id="ver">V60</small></h1>
+      <h1>MALL OF THE DEAD <small id="ver">V61</small></h1>
       <p class="tag">CHRISTMAS AT THE MALL. The power is out, the doors are open and the horde is coming for the tree.</p>
       <div class="chars" id="characters" aria-label="Choose your survivor"></div>
       <input id="playerName" placeholder="Write your name" maxlength="16" autocomplete="off">
+      <div class="modePick" id="modes" aria-label="Choose a mode"></div><input type="hidden" id="modeSel" value="arena">
       <div class="mapPick" id="maps" aria-label="Choose a map"></div><input type="hidden" id="mapSel" value="mall">
       <button class="big" id="start" type="button">START SOLO SURVIVAL</button>
       <label class="set" id="botLabel">AI TEAMMATES (solo or hosted room) <select id="botCount"><option value="0">None</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7 (full squad of 8)</option></select></label>
@@ -385,7 +415,9 @@ const characters=[
 
 // ---------------------------------------------------------------- map
 function rect(x,y,w,h,type,solid=true){const p={x,y,w,h,type,solid};props.push(p);return p}
-function rebuildBlocks(){blocks.length=0;for(const p of props)if(p.solid)blocks.push(p);walkDirty=true}
+const isTD=()=>gameMode==='td';
+let gameMode='arena',towers=[],cars=[],money=0,nextTid=1,tdSel=-1,tdPick=0;
+function rebuildBlocks(){blocks.length=0;for(const p of props)if(p.solid)blocks.push(p);for(const t of towers)if(t.solid)blocks.push(t.blk);walkDirty=true}
 let BARREL_SPOTS=[[11.0,27.0],[21.4,27.0],[11.2,36.0],[21.0,36.0],[5.3,-13.0],[26.2,-7.2],[8.0,-1.5],[24.5,-12.5],[15.4,-6.0],[12.9,6.4],[18.6,6.4],[8.3,13.3],[23.2,16.7],[12.9,20.8],[18.8,20.8]];
 let STATIC_LIGHTS=[
   {x:16,y:11.5,z:1.6,r:6.2,c:'tree'},{x:20.3,y:12.4,z:.6,r:3.4,c:'#cfe0ff'},
@@ -458,6 +490,7 @@ function buildMall(){
   [[15,-11.5],[9,-6.5],[24.5,-9.5],[17,-4.0],[5,-13.5],[27.5,-14.5]].forEach(([x,y],i)=>props.push({x,y,w:0,h:0,type:'debris',solid:false,renderOrder:-5,seed:i+1}));
   for(const [x,y] of [[6,-12.8],[26,-12.8],[6,-7.0],[26,-7.0],[16,-15.6],[16,-10.0],[16,-4.5],[16,-1.2]])props.push({x,y,w:0,h:0,type:'lamp',solid:false,renderOrder:x+y+.4});
   rect(0,world.y0,world.w,.12,'fence',false).renderOrder=-50;rect(0,world.y0,.12,-world.y0,'fence',false).renderOrder=-50;rect(world.w-.12,world.y0,.12,-world.y0,'fence',false).renderOrder=60;
+  if(gameMode==='td'){const rc=rect(25.9,9.4,2.2,1.1,'car');rc.c='#c4202b';rc.tdCar=1} // Tower Defense: the second E30, parked in the AR AUTO bay
   rebuildBlocks();
   // ---- Food court wing south of the 8 o'clock entrance. Wide aisles on purpose: bosses are big.
   wall(.25,25.75,.55,world.h-.8+.55-25.75);wall(31.2,25.75,.55,world.h-.8+.55-25.75);
@@ -479,10 +512,10 @@ function buildMall(){
 }
 
 // ---------------------------------------------------------------- collision
-function collision(x,y,r=.31,skipDoor=false){
+function collision(x,y,r=.31,skipDoor=false,skipTowers=false){
   if(x<.05+r||y<world.y0+.05+r||x>world.w-.05-r||y>world.h-.05-r)return true;
   for(let i=0;i<blocks.length;i++){
-    const b=blocks[i];if(skipDoor&&b===officeDoor)continue;
+    const b=blocks[i];if(skipDoor&&b===officeDoor)continue;if(skipTowers&&b.tw)continue;
     const cx=clamp(x,b.x,b.x+b.w),cy=clamp(y,b.y,b.y+b.h);
     if((x-cx)**2+(y-cy)**2<r*r)return true;
   }
@@ -535,10 +568,17 @@ function floodNav(field,grid,seeds){
     if(y<NH-1&&grid[k+NW]&&field[k+NW]>d){field[k+NW]=d;navQ[tail++]=k+NW}
   }
 }
+const navT=new Float32Array(NW*NH),walkGridT=new Uint8Array(NW*NH); // tower-breaching field: towers count as walkable
+function refreshWalk(){
+  if(!walkDirty)return;
+  const td=gameMode==='td';
+  for(let iy=0;iy<NH;iy++)for(let ix=0;ix<NW;ix++){const cx=(ix+.5)*NAV,cy=(iy+.5)*NAV+world.y0;walkGrid[iy*NW+ix]=collision(cx,cy,.27,true)?0:1;walkGridB[iy*NW+ix]=collision(cx,cy,.66,true)?0:1;if(td)walkGridT[iy*NW+ix]=collision(cx,cy,.27,true,true)?0:1}
+  walkDirty=false;
+}
 function rebuildNav(){
-  if(walkDirty){
-    for(let iy=0;iy<NH;iy++)for(let ix=0;ix<NW;ix++){const cx=(ix+.5)*NAV,cy=(iy+.5)*NAV+world.y0;walkGrid[iy*NW+ix]=collision(cx,cy,.27,true)?0:1;walkGridB[iy*NW+ix]=collision(cx,cy,.66,true)?0:1}
-    walkDirty=false;
+  refreshWalk();
+  if(gameMode==='td'){ // zombies flow toward the nearest standing car
+    floodNav(nav,walkGrid,tdCarSeeds(walkGrid));floodNav(navB,walkGridB,tdCarSeeds(walkGridB));floodNav(navT,walkGridT,tdCarSeeds(walkGridT));return;
   }
   const alive=players.filter(p=>p.hp>0),seeds=[];
   for(const p of (alive.length?alive:players))seeds.push(clamp(Math.floor((p.y-world.y0)/NAV),0,NH-1)*NW+clamp(Math.floor(p.x/NAV),0,NW-1));
@@ -1280,7 +1320,7 @@ const PLAYER_SPEED=2.65,DASH_SPEED=8.6,DASH_TIME=.18,DASH_CD=1.6;
 const REVIVE_TIME=3,INTERMISSION=11;
 
 const pk=(p,k)=>p.perks[k]||0;
-const dmgMul=p=>(1+.2*pk(p,'dmg'))*(buffs.dmg>0?2:1);
+const dmgMul=p=>(1+.2*pk(p,'dmg'))*(buffs.dmg>0?2:1)*(gameMode==='td'?TD_PLAYER_DMG:1);
 const rateMul=p=>(buffs.rapid>0?.55:1)/(1+.12*pk(p,'rate'));
 const reloadMul=p=>Math.pow(.8,pk(p,'reload'));
 const clipOf=(p,w)=>Math.round(GUNS[w].clip*(1+.3*pk(p,'mag')));
@@ -1323,13 +1363,14 @@ function makePlayer(id,character,name,slot=0){
 }
 
 function reset(){
-  titleOn=false;build();mmBg=null;botCount=0;
+  titleOn=false;towers=[];cars=[];money=0;build();mmBg=null;botCount=0;
   zombies=[];bullets=[];eprojs=[];lobs=[];hazards=[];pickups=[];boomQueue=[];carrierQueue=[];outEvents=[];
   startWave=clamp(Math.floor(Number($('waveTest').value)||1),1,100);
   wave=startWave-1;kills=0;teamScore=0;time=0;intermission=2.6;navTimer=0;spawnLeft=0;spawnTimer=0;waveSize=0;
   buffs.dmg=0;buffs.rapid=0;radioOn=false;nextEid=1;
   teamOwned=1;for(let i=1;i<GUNS.length;i++)if(startWave>GUNS[i].unlock)teamOwned|=1<<i;
   clearFx();buildFloor();
+  if(gameMode==='td')tdInit();
   state='playing';
 }
 
@@ -1436,7 +1477,7 @@ function damageZombie(z,amount,ownerId,opt={}){
 }
 function killZombie(z,owner,opt={}){
   if(z.dead)return;z.dead=true;kills++;
-  const def=ZT[z.t];
+  const def=ZT[z.t];if(gameMode==='td')tdReward(z);
   fx(['die',def.i,r2(z.x),r2(z.y),r2(z.angle),z.id,z.elf?1:0]);
   if(owner){
     owner.kills++;owner.combo++;owner.comboT=3;
@@ -1486,7 +1527,7 @@ function spawnZombieAt(t,x,y,extra){
   zombies.push(z);return z;
 }
 function spawnZombie(){
-  const gate=pick(GATES);
+  const gate=pick(gameMode==='td'&&tdActive.length?tdActive:GATES);
   const x=gate.x+rand(-1,1)*(gate.jx||0),y=gate.y+rand(-1,1)*(gate.jy||0);
   if(carrierQueue.length){spawnZombieAt('carrier',x,y,{loot:carrierQueue.shift()});return}
   const r=Math.random();let t='walker';
@@ -1506,7 +1547,7 @@ function spawnBoss(){
   fx(['snd','boss']);
 }
 function dogPack(){
-  const g=pick(GATES);let bx=g.x,by=g.y;
+  const g=pick(gameMode==='td'&&tdActive.length?tdActive:GATES);let bx=g.x,by=g.y;
   for(let k=0;k<12;k++){const x=g.x+rand(-1,1)*(g.jx||0),y=g.y+rand(-1,1)*(g.jy||0);if(!collision(x,y,.5)){bx=x;by=y;break}}
   for(let i=0;i<3;i++){
     let x=bx+rand(-.5,.5),y=by+rand(-.5,.5);if(collision(x,y,.25)){x=bx;y=by}
@@ -1623,7 +1664,7 @@ function snowmanBoss(z,t,dist,dt){
     z.novaWind-=dt;
     if(z.novaWind<=0){
       z.novaCd=z.enraged?5:8;const R=3.7;
-      fx(['ice',r2(z.x),r2(z.y),R,2]);say('ICE SHARDS!',z.x,z.y-2.3,'#9fe6ff',1.2);
+      fx(['ice',r2(z.x),r2(z.y),R,2]);if(gameMode==='td')tdSplash(z.x,z.y,R,110,90);say('ICE SHARDS!',z.x,z.y-2.3,'#9fe6ff',1.2);
       for(const p of players){if(p.hp<=0||p.dashT>0||Math.hypot(p.x-z.x,p.y-z.y)>R)continue;knockPlayer(p,z.x,z.y,1.4,1.0);p.invuln=0;hurtPlayer(p,17);p.invuln=1}
       if(z.enraged)for(let i=0;i<8;i++){const a=TAU*i/8,tx=clamp(z.x+Math.cos(a)*6.5,1,world.w-1),ty=clamp(z.y+Math.sin(a)*6.5,world.y0+1,world.h-1);lobs.push({k:3,x0:z.x,y0:z.y,tx,ty,t:0,dur:.9,o:null});fx(['tele',2,r2(tx),r2(ty),1.5,.9])}
     }
@@ -1648,7 +1689,7 @@ function updateBoss(z,t,dist,dt){ // returns true when the boss is busy this fra
     if(z.slamWind>0){
       z.slamWind-=dt;
       if(z.slamWind<=0){
-        z.slamCd=7.5;fx(['slam',r2(z.x),r2(z.y),3.15]);say('GROUND SLAM!',z.x,z.y-1.9,'#ffae6e',1.4);
+        z.slamCd=7.5;fx(['slam',r2(z.x),r2(z.y),3.15]);if(gameMode==='td')tdSplash(z.x,z.y,3.15,140,110);say('GROUND SLAM!',z.x,z.y-1.9,'#ffae6e',1.4);
         for(const p of players){
           const d=Math.hypot(p.x-z.x,p.y-z.y);
           if(d<3.15&&p.hp>0&&p.knockdown<=0&&p.dashT<=0){knockPlayer(p,z.x,z.y,1.2,1.05);p.invuln=0;hurtPlayer(p,12);p.invuln=1.1;say('KNOCKED DOWN!',p.x,p.y-1.2,'#ffdb8a',1.2)}
@@ -1704,7 +1745,8 @@ function updateZombies(dt){
     if(z.burn>0){z.burn-=dt;damageZombie(z,z.burnDps*dt,z.burnBy,{quiet:true});if(z.dead)continue}
     if(z.kx||z.ky){move(z,z.kx*dt,z.ky*dt,def.r);const k=Math.exp(-9*dt);z.kx*=k;z.ky*=k;if(Math.abs(z.kx)+Math.abs(z.ky)<.05)z.kx=z.ky=0}
     if(z.stun>0){z.stun-=dt;continue}
-    const t=nearestPlayer(z);if(!t)continue;
+    const t=gameMode==='td'?tdTarget(z):nearestPlayer(z);if(!t)continue;
+    if(z.slowT>0){z.slowT-=dt;if(z.slowT<=0)z.slowF=1}
     const vx=t.x-z.x,vy=t.y-z.y,dist=Math.hypot(vx,vy);
     if(!(z.charging>0))z.angle=Math.atan2(vy,vx);
     if(def.boss&&updateBoss(z,t,dist,dt))continue;
@@ -1719,16 +1761,19 @@ function updateZombies(dt){
       }
     }
     if(dist>.5&&!hold){
-      let [ax,ay]=navDirection(z,t);
+      const ox0=z.x,oy0=z.y;
+      let [ax,ay]=gameMode==='td'?tdNav(z,t):navDirection(z,t);
       if(z.t==='sprinter'){
         z.flankTime-=dt;
         if(z.flankTime>0&&dist>2.2){const fx2=ax*.85-ay*z.flank*.35,fy2=ay*.85+ax*z.flank*.35,m=Math.hypot(fx2,fy2)||1;if(!collision(z.x+fx2/m*.6,z.y+fy2/m*.6,.27)){ax=fx2/m;ay=fy2/m}}
       }
       if(z.t==='dog'){z.cd-=dt;z.lunge=Math.max(0,(z.lunge||0)-dt);if(dist<2.6&&dist>.8&&z.cd<=0){z.lunge=.3;z.cd=rand(1.8,3)}}
-      zombieStep(z,ax,ay,z.speed*(z.burn>0&&!def.boss?.85:1)*(z.lunge>0?1.8:1),dt);z.stride+=z.speed*dt*5;
+      const spd=z.speed*(z.burn>0&&!def.boss?.85:1)*(z.lunge>0?1.8:1)*(z.slowT>0?(z.slowF||1):1);
+      zombieStep(z,ax,ay,spd,dt);z.stride+=spd*dt*5;if(gameMode==='td')tdBreach(z,def,ox0,oy0,spd,dt);
       if(def.boss){z.sT=(z.sT||0)+dt;if(z.sT>=.7){const m=Math.hypot(z.x-(z.sx==null?z.x:z.sx),z.y-(z.sy==null?z.y:z.sy));z.stuck=m<.18?(z.stuck||0)+1:0;z.sx=z.x;z.sy=z.y;z.sT=0;if(z.stuck>=2&&dist>2.2){bossUnstick(z);z.stuck=0}}}
     }
-    if(dist<def.reach&&z.attack<=0){z.attack=def.atk||.8;if(hurtPlayer(t,def.dmg))fx(['shake',6,r2(t.x),r2(t.y)])}
+    if(t.car)tdCarAttack(z,def,t.car);
+    else if(dist<def.reach&&z.attack<=0){z.attack=def.atk||.8;if(hurtPlayer(t,def.dmg))fx(['shake',6,r2(t.x),r2(t.y)])}
     else if(door.solid&&z.attack<=0){ // break the office door down
       const cx=clamp(z.x,door.x,door.x+door.w),cy=clamp(z.y,door.y,door.y+door.h);
       if((z.x-cx)**2+(z.y-cy)**2<(def.r+.22)**2){
@@ -1791,6 +1836,7 @@ function updateHostile(dt){
     const e=eprojs[i];e.life-=dt;e.x+=e.vx*dt;e.y+=e.vy*dt;
     let done=e.life<=0||bulletCollision(e.x,e.y,.1);
     if(!done)for(const p of players)if(p.hp>0&&p.dashT<=0&&Math.hypot(p.x-e.x,p.y-e.y)<.42){hurtPlayer(p,9);done=true;break}
+    if(!done&&gameMode==='td'){for(const c of cars)if(c.alive&&rectDist(e.x,e.y,c)<.2){damageCar(c,7);done=true;break}if(!done)for(const t of towers)if(t.solid&&rectDist(e.x,e.y,t)<.2){damageTower(t,7);done=true;break}}
     if(done){
       eprojs.splice(i,1);
       if(hazards.length<26)hazards.push({k:0,x:clamp(e.x,.6,world.w-.6),y:clamp(e.y,world.y0+.6,world.h-.6),r:.85,life:3.5,tick:0});
@@ -1802,7 +1848,7 @@ function updateHostile(dt){
     lobs.splice(i,1);
     if(l.k===0){const o=playerById(l.o);boomQueue.push({x:l.tx,y:l.ty,r:2.5,dmg:240*(o?dmgMul(o):1),o:l.o,t:0,kind:0})}
     else if(l.k===2){const g=zombies.find(q=>q.id===l.gz&&!q.dead);fx(['slam',r2(l.tx),r2(l.ty),1.4]);if(g)for(const p of players)if(p.hp>0&&p.dashT<=0&&Math.hypot(p.x-l.tx,p.y-l.ty)<1.4)grinchSteal(g,p)}
-    else if(l.k===3){fx(['ice',r2(l.tx),r2(l.ty),1.9,1]);for(const p of players)if(p.hp>0&&p.dashT<=0&&Math.hypot(p.x-l.tx,p.y-l.ty)<1.9){knockPlayer(p,l.tx,l.ty,.9,.7);p.invuln=0;hurtPlayer(p,22);p.invuln=.9}}
+    else if(l.k===3){fx(['ice',r2(l.tx),r2(l.ty),1.9,1]);if(gameMode==='td')tdSplash(l.tx,l.ty,1.9,120,100);for(const p of players)if(p.hp>0&&p.dashT<=0&&Math.hypot(p.x-l.tx,p.y-l.ty)<1.9){knockPlayer(p,l.tx,l.ty,.9,.7);p.invuln=0;hurtPlayer(p,22);p.invuln=.9}}
     else boomQueue.push({x:l.tx,y:l.ty,r:1.5,dmg:0,o:null,t:0,hurt:20,kind:4});
   }
   for(let i=hazards.length-1;i>=0;i--){
@@ -2012,7 +2058,7 @@ function radioNext(p){
 
 // ---------------------------------------------------------------- waves
 function nextWave(){
-  wave++;
+  wave++;if(gameMode==='td')tdPickGates(wave);
   const n=players.length,boss=wave%5===0;
   for(const p of players){
     if(p.offer)choosePerk(p,0);
@@ -2049,8 +2095,9 @@ function dropRoundAid(){
 function waveCleared(){
   if(isMulti())for(const p of players)if(p.hp<=0)revivePlayer(p,.5);
   dropRoundAid();
-  intermission=INTERMISSION;
+  intermission=gameMode==='td'?TD_BUILD_TIME:INTERMISSION;
   for(const p of players)makeOffer(p);
+  if(gameMode==='td'){const b=tdWaveBonus();say('WAVE BONUS +$'+b,players[0].x,players[0].y-2.2,'#9bffb5',2.4,20)}
   const bonus=wave*50;teamScore+=bonus;for(const p of players)p.score+=Math.round(bonus/players.length);
   fx(['clear',wave,wave%5===0?1:0]);
 }
@@ -2071,9 +2118,314 @@ function update(dt){
   updateZombies(dt);
   updateHostile(dt);
   updatePickups(dt);
+  if(gameMode==='td')tdUpdate(dt);
   if(zombies.some(z=>z.dead))zombies=zombies.filter(z=>!z.dead);
   if(spawnLeft===0&&zombies.length===0&&intermission<=0&&wave>0)waveCleared();
-  if(players.length&&players.every(p=>p.hp<=0))endGame();
+  if(gameMode!=='td'&&players.length&&players.every(p=>p.hp<=0))endGame();
+}
+
+// ---- 35_td.js
+// ============================================================================
+//  TOWER DEFENSE mode. Defend two E30s (the black one on the raffle stand and a
+//  red one in the AR AUTO bay) with buildable Christmas towers. Host-authoritative:
+//  survivors send build / upgrade / sell actions, the host validates and applies
+//  them, and the tower list + shared money ride along in every snapshot.
+// ============================================================================
+const TD_START_MONEY=350,TD_BUILD_TIME=32,TD_FIRST_BUILD=40,TD_AGGRO=2.4,TD_CAR_HP=1600;
+const TD_PLAYER_DMG=.5;            // survivors do half damage in this mode
+const TD_ZOMBIE_CAR=.8;            // zombie hit damage multiplier against cars
+const TD_REPAIR_TOWER=40,TD_REPAIR_CAR=70,TD_REPAIR_REACH=1.5;
+const TD_SELL=.6,TD_GATE_CLEAR=3.2,TD_RESPAWN=8;
+const TD_LVL={dmg:[1,1.7,2.6],hp:[1,1.6,2.4],range:[1,1.12,1.25],rate:[1,.8,.62],slow:[.5,.38,.27]};
+// cost = price, hp = health, range = radius in tiles, dmg per shot (or per second for the flamer / spikes)
+const TD_TYPES=[
+  {id:'turret',name:'TINSEL TURRET',blurb:'Fast-firing gun turret',cost:100,hp:130,range:7,dmg:9,rate:.22,solid:true},
+  {id:'cannon',name:'NUTCRACKER CANNON',blurb:'Slow, heavy shells with splash',cost:230,hp:240,range:9.5,dmg:90,rate:1.7,splash:1.25,solid:true},
+  {id:'flame',name:'YULE-LOG FLAMER',blurb:'Burns everything around it',cost:190,hp:170,range:3.3,dmg:36,rate:.2,solid:true},
+  {id:'ice',name:'TINSEL TRAP',blurb:'Slows zombies that cross it',cost:60,hp:90,range:1.5,dmg:0,rate:.25,solid:false},
+  {id:'spike',name:'CANDY-CANE SPIKES',blurb:'Damages zombies that cross it',cost:75,hp:110,range:1.15,dmg:30,rate:.4,solid:false},
+  {id:'wall',name:'GIFT-BOX BARRICADE',blurb:'Solid wall. Zombies must break it',cost:40,hp:320,range:0,dmg:0,rate:1,solid:true}
+];
+const TD_CAR_DEFS=[
+  {name:'BLACK E30',x:20.35,y:12.38,rx:18.3,ry:11.1,rw:4.1,rh:2.55},
+  {name:'RED E30',x:27.0,y:9.95,rx:25.9,ry:9.4,rw:2.2,rh:1.1}
+];
+let tdActive=[],tdVer=0,tdEndReason='';
+const tdTmp=new Float32Array(NW*NH);
+
+function tdStat(t){
+  const T=TD_TYPES[t.type],L=t.lvl;
+  return {dmg:T.dmg*TD_LVL.dmg[L],range:T.range*(T.range>2?TD_LVL.range[L]:1+(L*.12)),rate:T.rate*(T.id==='ice'||T.id==='spike'||T.id==='wall'?1:TD_LVL.rate[L]),hp:Math.round(T.hp*TD_LVL.hp[L]),slow:TD_LVL.slow[L]};
+}
+const tdUpCost=t=>t.lvl>=2?0:Math.round(TD_TYPES[t.type].cost*(t.lvl===0?.6:1));
+const tdSellValue=t=>Math.round(t.spent*TD_SELL);
+function tdMakeTower(type,cx,cy){
+  const t={id:nextTid++,type,x:cx,y:cy,lvl:0,ang:0,cd:rand(0,.3),scan:0,spent:TD_TYPES[type].cost,solid:TD_TYPES[type].solid,blk:{x:cx-.5,y:cy-.5,w:1,h:1,tw:true,type:'tdtower',solid:true}};
+  t.hp=t.maxHp=tdStat(t).hp;return t;
+}
+
+// ---------------------------------------------------------------- setup
+function tdInit(){
+  towers=[];nextTid=1;money=TD_START_MONEY;tdEndReason='';tdVer++;
+  cars=TD_CAR_DEFS.map((d,i)=>{const c=Object.assign({id:i,hp:TD_CAR_HP,max:TD_CAR_HP,alive:true,hurtT:0},d);c.tgt={x:d.x,y:d.y,car:c,hp:1,input:{dx:0,dy:0}};return c});
+  tdActive=[];tdPickGates(1);
+  intermission=TD_FIRST_BUILD;
+}
+function tdPickGates(w){
+  const n=Math.min(GATES.length,w<=3?2:w<=6?3:4),idx=GATES.map((g,i)=>i);
+  for(let i=idx.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[idx[i],idx[j]]=[idx[j],idx[i]]}
+  tdActive=idx.slice(0,n).map(i=>GATES[i]);
+}
+function rectDist(px,py,c){
+  const rx=c.rx!=null?c.rx:c.x-.5,ry=c.ry!=null?c.ry:c.y-.5,rw=c.rw!=null?c.rw:1,rh=c.rh!=null?c.rh:1;
+  const dx=Math.max(rx-px,0,px-(rx+rw)),dy=Math.max(ry-py,0,py-(ry+rh));return Math.hypot(dx,dy);
+}
+function tdCarsAlive(){return cars.filter(c=>c.alive)}
+function tdCarSeeds(grid){
+  const seeds=[];
+  for(const c of cars){
+    if(!c.alive)continue;
+    const x0=Math.floor((c.rx-1)/NAV),x1=Math.ceil((c.rx+c.rw+1)/NAV),y0=Math.floor((c.ry-1-world.y0)/NAV),y1=Math.ceil((c.ry+c.rh+1-world.y0)/NAV);
+    for(let iy=Math.max(0,y0);iy<=Math.min(NH-1,y1);iy++)for(let ix=Math.max(0,x0);ix<=Math.min(NW-1,x1);ix++){
+      const cx=(ix+.5)*NAV,cy=(iy+.5)*NAV+world.y0;
+      if(grid[iy*NW+ix]&&rectDist(cx,cy,c)<.85)seeds.push(iy*NW+ix);
+    }
+  }
+  return seeds;
+}
+const cellOf=(x,y)=>clamp(Math.floor((y-world.y0)/NAV),0,NH-1)*NW+clamp(Math.floor(x/NAV),0,NW-1);
+
+// ---------------------------------------------------------------- placement
+// Why a spot is not allowed ('' when it is). Used by the ghost preview and, again, by the host.
+function tdWhyNot(type,cx,cy,forHost){
+  const T=TD_TYPES[type];if(!T)return 'BAD TYPE';
+  if(cx<1.6||cy<world.y0+1.6||cx>world.w-1.6||cy>world.h-1.6)return 'OUT OF BOUNDS';
+  for(const g of GATES)if(Math.hypot(g.x-cx,g.y-cy)<TD_GATE_CLEAR)return 'TOO CLOSE TO A GATE';
+  const x0=cx-.5,y0=cy-.5;
+  for(const b of blocks){
+    if(b.x<x0+1&&b.x+b.w>x0&&b.y<y0+1&&b.y+b.h>y0)return 'BLOCKED';
+  }
+  for(const t of towers)if(Math.abs(t.x-cx)<.9&&Math.abs(t.y-cy)<.9)return 'OCCUPIED';
+  for(const c of cars)if(c.rx<x0+1&&c.rx+c.rw>x0&&c.ry<y0+1&&c.ry+c.rh>y0)return 'BLOCKED';
+  if(T.solid){
+    for(const p of players)if(p.hp>0&&rectDist(p.x,p.y,{x:cx,y:cy})<.38)return 'SURVIVOR IN THE WAY';
+    if(forHost)for(const z of zombies)if(!z.dead&&rectDist(z.x,z.y,{x:cx,y:cy})<.3)return 'ZOMBIE IN THE WAY';
+    if(tdSeals(cx,cy))return "WOULD SEAL THE ZOMBIES OUT";
+  }
+  return '';
+}
+// Would a solid tower here cut every gate off from the cars? (patch the walk grid locally, flood from the cars)
+function tdSeals(cx,cy){
+  refreshWalk();
+  const g=walkGrid.slice(),ix0=Math.max(0,Math.floor((cx-1.2)/NAV)),ix1=Math.min(NW-1,Math.ceil((cx+1.2)/NAV)),iy0=Math.max(0,Math.floor((cy-1.2-world.y0)/NAV)),iy1=Math.min(NH-1,Math.ceil((cy+1.2-world.y0)/NAV));
+  for(let iy=iy0;iy<=iy1;iy++)for(let ix=ix0;ix<=ix1;ix++){
+    const px=(ix+.5)*NAV,py=(iy+.5)*NAV+world.y0;
+    if(rectDist(px,py,{x:cx,y:cy})<.27)g[iy*NW+ix]=0;
+  }
+  const seeds=tdCarSeeds(g);if(!seeds.length)return false;
+  floodNav(tdTmp,g,seeds);
+  for(const gate of GATES)if(tdTmp[cellOf(gate.x,gate.y)]>=1e7)return true;
+  return false;
+}
+function tdSnap(v){return Math.floor(v)+.5}
+
+// ---------------------------------------------------------------- actions (host)
+function tdBuild(p,type,x,y){
+  if(!isTD()||!p||p.hp<=0)return;
+  type=type|0;const T=TD_TYPES[type];if(!T||!Number.isFinite(+x)||!Number.isFinite(+y))return;
+  if(Math.hypot(+x-p.x,+y-p.y)>26)return;
+  const cx=tdSnap(+x),cy=tdSnap(+y);
+  if(money<T.cost){say('NOT ENOUGH MONEY',p.x,p.y-1.4,'#ff9a8a',1.2);return}
+  const why=tdWhyNot(type,cx,cy,true);if(why){say(why,p.x,p.y-1.4,'#ff9a8a',1.4);return}
+  money-=T.cost;const t=tdMakeTower(type,cx,cy);towers.push(t);
+  if(t.solid)rebuildBlocks();tdVer++;
+  fx(['tbuild',cx,cy]);
+}
+function tdFind(id){return towers.find(t=>t.id===(id|0))}
+function tdUpgrade(p,id){
+  const t=tdFind(id);if(!t||!isTD()||!p||p.hp<=0)return;
+  const c=tdUpCost(t);if(!c)return;
+  if(money<c){say('NOT ENOUGH MONEY',p.x,p.y-1.4,'#ff9a8a',1.2);return}
+  money-=c;t.spent+=c;t.lvl++;const f=t.hp/t.maxHp;t.maxHp=tdStat(t).hp;t.hp=Math.max(t.hp,t.maxHp*f);tdVer++;
+  fx(['tbuild',t.x,t.y]);say('LEVEL '+(t.lvl+1),t.x,t.y-1.2,'#ffe17a',1.2);
+}
+function tdSell(p,id){
+  const t=tdFind(id);if(!t||!isTD()||!p)return;
+  money+=tdSellValue(t);removeTower(t,true);
+}
+function removeTower(t,sold){
+  const i=towers.indexOf(t);if(i<0)return;towers.splice(i,1);
+  if(t.solid)rebuildBlocks();tdVer++;
+  if(sold)fx(['tbuild',t.x,t.y]);else fx(['tdie',t.x,t.y]);
+}
+function tdSkip(){if(isTD()&&intermission>.4)intermission=.3}
+
+// ---------------------------------------------------------------- damage
+function damageCar(car,amt){
+  if(!car.alive)return;
+  car.hp-=amt;car.hurtT=.15;
+  if(Math.random()<.2)fx(['snd','clang',r2(car.x),r2(car.y)]);
+  if(car.hp<=0){
+    car.hp=0;car.alive=false;fx(['cardie',r2(car.x),r2(car.y)]);say(car.name+' DESTROYED!',car.x,car.y-1.6,'#ff6a5a',3,22);
+    walkDirty=true;navTimer=0;tdVer++;
+    if(!tdCarsAlive().length){tdEndReason='BOTH E30s WERE DESTROYED';endGame()}
+  }
+}
+function damageTower(t,amt){
+  t.hp-=amt;t.hurtT=.12;
+  if(t.hp<=0){fx(['snd','clang',t.x,t.y]);removeTower(t,false)}
+}
+function tdSplash(x,y,r,carDmg,towerDmg){ // boss slams and snowballs hurt what they land on
+  for(const c of cars)if(c.alive&&rectDist(x,y,c)<r)damageCar(c,carDmg);
+  for(let i=towers.length-1;i>=0;i--){const t=towers[i];if(rectDist(x,y,t)<r)damageTower(t,towerDmg)}
+}
+function tdReward(z){
+  const def=ZT[z.t];money+=def.boss?Math.round(def.score*.5):Math.max(4,Math.round(def.score*.45));
+}
+function tdWaveBonus(){const b=90+wave*22+Math.max(0,players.length-1)*20;money+=b;return b}
+
+// ---------------------------------------------------------------- zombies in TD
+function tdTarget(z){
+  let bp=null,bd=TD_AGGRO;
+  for(const p of players)if(p.hp>0){const d=Math.hypot(p.x-z.x,p.y-z.y);if(d<bd){bd=d;bp=p}}
+  if(bp&&los(z.x,z.y,bp.x,bp.y))return bp;
+  let bc=null,cd=1e9;
+  for(const c of cars)if(c.alive){const d=rectDist(z.x,z.y,c);if(d<cd){cd=d;bc=c}}
+  return bc?bc.tgt:null;
+}
+function tdNav(z,t){
+  z.breach=false;
+  if(!t.car){const d=Math.hypot(t.x-z.x,t.y-z.y)||1;return [(t.x-z.x)/d,(t.y-z.y)/d]}
+  const boss=ZT[z.t].boss;
+  let r=boss?(dirFrom(navB,z,t)||dirFrom(nav,z,t)):dirFrom(nav,z,t);
+  if(r)return r;
+  r=dirFrom(navT,z,t);if(r){z.breach=true;return r}
+  const d=Math.hypot(t.x-z.x,t.y-z.y)||1;z.breach=true;return [(t.x-z.x)/d,(t.y-z.y)/d];
+}
+// After a step: a zombie that is boxed in by a tower (no clean route, or simply not getting anywhere) chews through it.
+function tdBreach(z,def,ox,oy,sp,dt){
+  const moved=Math.hypot(z.x-ox,z.y-oy),want=sp*dt;
+  z.blk=(moved<want*.35)?(z.blk||0)+dt:Math.max(0,(z.blk||0)-dt*2);
+  if(!(z.breach||z.blk>.25)||z.attack>0)return;
+  let best=null,bd=1e9;
+  for(const t of towers){if(!t.solid)continue;const d=rectDist(z.x,z.y,t);if(d<bd){bd=d;best=t}}
+  if(best&&bd<def.r+.45){
+    z.attack=def.atk||.8;damageTower(best,def.dmg*(def.boss?3:1.3));
+    if(Math.random()<.3)fx(['snd','door',r2(best.x),r2(best.y)]);
+  }
+}
+function tdCarAttack(z,def,car){
+  if(z.attack>0)return;
+  if(rectDist(z.x,z.y,car)<def.r+.42){z.attack=def.atk||.8;damageCar(car,def.dmg*TD_ZOMBIE_CAR*(def.boss?2:1))}
+}
+
+// ---------------------------------------------------------------- towers
+function tdZombiesNear(x,y,r){
+  const out=[];
+  for(const z of zombies)if(!z.dead&&Math.hypot(z.x-x,z.y-y)<r+ZT[z.t].r)out.push(z);
+  return out;
+}
+function tdPickTarget(t,range){
+  let best=null,bd=1e9;
+  for(const z of zombies){
+    if(z.dead)continue;const d=Math.hypot(z.x-t.x,z.y-t.y);
+    if(d>range+ZT[z.t].r||d>=bd)continue;
+    if(!los(t.x,t.y,z.x,z.y))continue;
+    bd=d;best=z;
+  }
+  return best;
+}
+function updateTowers(dt){
+  for(let i=towers.length-1;i>=0;i--){
+    const t=towers[i],T=TD_TYPES[t.type],S=tdStat(t);
+    t.hurtT=Math.max(0,(t.hurtT||0)-dt);
+    t.cd-=dt;
+    if(T.id==='turret'||T.id==='cannon'){
+      t.scan-=dt;
+      if(t.scan<=0){t.scan=.12;t.tz=tdPickTarget(t,S.range)}
+      const z=t.tz;
+      if(z&&(z.dead||Math.hypot(z.x-t.x,z.y-t.y)>S.range+1))t.tz=null;
+      if(t.tz){
+        t.ang=Math.atan2(t.tz.y-t.y,t.tz.x-t.x);
+        if(t.cd<=0){
+          t.cd=S.rate;const tz=t.tz;
+          if(T.id==='turret'){
+            damageZombie(tz,S.dmg,null,{quiet:true,dir:[tz.x-t.x,tz.y-t.y],kb:.25});
+            fx(['tshot',t.id,r2(t.x),r2(t.y),r2(tz.x),r2(tz.y),0]);
+          }else{
+            const R=T.splash*(1+t.lvl*.15);
+            fx(['tshot',t.id,r2(t.x),r2(t.y),r2(tz.x),r2(tz.y),1]);fx(['tboom',r2(tz.x),r2(tz.y),R]);
+            for(const q of zombies){
+              if(q.dead)continue;const d=Math.hypot(q.x-tz.x,q.y-tz.y);
+              if(d<R+ZT[q.t].r)damageZombie(q,S.dmg*(1-.5*Math.min(1,d/R)),null,{quiet:true,dir:[q.x-tz.x,q.y-tz.y],kb:1.4});
+            }
+          }
+        }
+      }
+    }else if(T.id==='flame'){
+      if(t.cd<=0){
+        t.cd=S.rate;const near=tdZombiesNear(t.x,t.y,S.range);
+        t.burning=near.length>0;
+        if(near.length){
+          fx(['tflame',r2(t.x),r2(t.y),r2(S.range)]);
+          for(const z of near){damageZombie(z,S.dmg*S.rate,null,{quiet:true});if(!z.dead){z.burn=Math.max(z.burn,.7);z.burnDps=Math.max(z.burnDps,6+t.lvl*3);z.burnBy=null}}
+        }
+      }
+    }else if(T.id==='ice'||T.id==='spike'){
+      if(t.cd<=0){
+        t.cd=S.rate;const near=tdZombiesNear(t.x,t.y,S.range-.2);
+        t.active=near.length>0;
+        for(const z of near){
+          if(T.id==='ice'){z.slowT=.45;z.slowF=Math.min(z.slowF||1,ZT[z.t].boss?Math.max(.55,S.slow):S.slow)}
+          else damageZombie(z,S.dmg*S.rate*(ZT[z.t].boss?.5:1),null,{quiet:true});
+        }
+        if(near.length){t.hp-=near.length*1.6*S.rate*(T.id==='spike'?1.3:1);t.hurtT=.1;if(near.length&&Math.random()<.35)fx(['tflame2',r2(t.x),r2(t.y),T.id==='ice'?0:1]);if(t.hp<=0){removeTower(t,false);continue}}
+      }
+    }
+    if(t.hp<=0)removeTower(t,false);
+  }
+}
+// holding E next to a damaged tower or car mends it (unless a downed friend needs reviving first)
+function tdRepair(p,dt){
+  if(!p.input||!p.input.revive||p.hp<=0)return;
+  for(const q of players)if(q!==p&&q.hp<=0&&Math.hypot(q.x-p.x,q.y-p.y)<1.7)return;
+  let best=null,bd=TD_REPAIR_REACH,car=false;
+  for(const t of towers){if(t.hp>=t.maxHp-.01)continue;const d=rectDist(p.x,p.y,t);if(d<bd){bd=d;best=t}}
+  for(const c of cars){if(!c.alive||c.hp>=c.max-.01)continue;const d=rectDist(p.x,p.y,c);if(d<bd){bd=d;best=c;car=true}}
+  if(!best)return;
+  if(car)best.hp=Math.min(best.max,best.hp+TD_REPAIR_CAR*dt);else best.hp=Math.min(best.maxHp,best.hp+TD_REPAIR_TOWER*dt);
+  p.rpT=(p.rpT||0)-dt;if(p.rpT<=0){p.rpT=.4;fx(['trep',r2(best.x),r2(best.y)])}
+}
+function tdUpdate(dt){
+  for(const c of cars)c.hurtT=Math.max(0,c.hurtT-dt);
+  updateTowers(dt);
+  for(const p of players)tdRepair(p,dt);
+  for(const p of players){ // downed survivors come back after a while: only losing both cars ends the run
+    if(p.hp>0){p.rt=0;continue}
+    p.rt=(p.rt||0)+dt;
+    if(p.rt>=TD_RESPAWN){p.rt=0;revivePlayer(p,.6);p.x=START.x+rand(-.6,.6);p.y=START.y+rand(-.6,.6);p.tp++;say('BACK IN THE FIGHT',p.x,p.y-1.4,'#9bffb5',1.6)}
+  }
+}
+
+// ---------------------------------------------------------------- net sync
+function tdPack(){
+  return {m:Math.floor(money),c:cars.map(c=>[Math.ceil(c.hp),c.alive?1:0]),T:towers.map(t=>[t.id,t.type,t.x,t.y,t.lvl,Math.ceil(t.hp),r2(t.ang||0),t.tz?1:0]),g:tdActive.map(g=>GATES.indexOf(g))};
+}
+function tdApply(s){
+  if(!s)return;
+  money=s.m;
+  s.c.forEach((a,i)=>{if(cars[i]){cars[i].hp=a[0];cars[i].alive=!!a[1]}});
+  const old=new Map(towers.map(t=>[t.id,t])),next=[];let dirty=old.size!==s.T.length;
+  for(const a of s.T){
+    let t=old.get(a[0]);
+    if(!t||t.lvl!==a[4]||t.type!==a[1]){
+      const keep=t;t=tdMakeTower(a[1],a[2],a[3]);t.id=a[0];t.lvl=a[4];if(keep)t.hurtT=keep.hurtT;dirty=true;
+    }
+    t.hp=a[5];t.maxHp=tdStat(t).hp;t.ang=a[6];t.tz=a[7]?1:0;next.push(t);
+  }
+  towers=next;
+  tdActive=(s.g||[]).map(i=>GATES[i]).filter(Boolean);
+  if(dirty){rebuildBlocks();tdVer++}
 }
 
 // ---- 40_net.js
@@ -2152,7 +2504,8 @@ function handleNet(msg){
 function beginNet(msg){
   netPlaying=true;hostId=msg.host;netHost=msg.host===netId;netMembers=msg.members;
   $('waveTest').value=msg.wave||1;
-  applyMap(msg.map);
+  gameMode=msg.mode==='td'?'td':'arena';
+  applyMap(gameMode==='td'?'mall':msg.map);
   reset();zMap.clear();lastSnapAt=performance.now();snapDur=.05;
   players=[];me=null;
   msg.members.forEach((m,i)=>{const p=makePlayer(m.id,m.character,m.name,i);players.push(p);if(m.id===netId)me=p});
@@ -2183,6 +2536,10 @@ function applyAction(p,a){
     case 'interact':interact(p);break;
     case 'radio':radioNext(p);break;
     case 'drop':dropGun(p);break;
+    case 'tbuild':tdBuild(p,a.n,a.x,a.y);break;
+    case 'tup':tdUpgrade(p,a.i);break;
+    case 'tsell':tdSell(p,a.i);break;
+    case 'tskip':tdSkip();break;
     case 'perk':choosePerk(p,a.i|0);break;
     case 'nade':if(Number.isFinite(+a.x)&&Number.isFinite(+a.y))throwNade(p,+a.x,+a.y);break;
     case 'dash':
@@ -2200,6 +2557,7 @@ function packSnap(){
     bf:[r2(buffs.dmg),r2(buffs.rapid)],d:officeDoor.solid?1:0,r:radioOn?radioTrack+1:0,br:mask,
     P:players.map(p=>[p.id,r2(p.x),r2(p.y),r2(p.angle),Math.ceil(p.hp),p.maxHp,p.weapon,p.ammo[p.weapon],r2(p.reload),r2(p.reloadTotal),r2(p.knockdown),
       p.hp<=0?1:0,r2(p.reviveProgress),p.grenades,p.kills,p.score,p.combo,p.perks,p.offer,p.tp,r2(p.dashCd),p.character,p.shoutTimer>0?1:0,p.invuln>0?1:0,p.name,p.gunLock||0,p.deaths||0,p===me?netPing:(p.ping||0),p.revives||0,p.crouch&&p.hp>0?1:0]),
+    td:gameMode==='td'?tdPack():0,
     Z:zombies.map(z=>[z.id,ZT[z.t].i,r2(z.x),r2(z.y),r2(z.angle),Math.ceil(z.hp),z.maxHp,zFlags(z)]),
     B:bullets.map(b=>[r2(b.x),r2(b.y),r2(b.vx),r2(b.vy),r2(b.life),b.k]),
     E:eprojs.map(e=>[r2(e.x),r2(e.y),r2(e.vx),r2(e.vy)]),
@@ -2222,6 +2580,7 @@ function sendFinalSnap(){if(netPlaying&&netHost)netSend({t:'snapshot',snapshot:p
 // ---------------------------------------------------------------- guest side
 function applySnap(s){
   const now=performance.now(),gap=(now-lastSnapAt)/1000;lastSnapAt=now;
+  if(s.td&&gameMode==='td')tdApply(s.td);
   snapDur=clamp(snapDur*.85+gap*.15,.035,.2);snapSeq++;
   wave=s.w;kills=s.k;teamScore=s.sc;spawnLeft=s.sl;waveSize=s.ws;intermission=s.im;time=s.t;teamOwned=s.ow;
   buffs.dmg=s.bf[0];buffs.rapid=s.bf[1];radioOn=!!s.r;if(s.r)radioTrack=(s.r-1)%RADIO_KEYS.length;
@@ -2479,6 +2838,7 @@ function playFx(ev){
     case 'clear':banner={text:ev[2]?'BOSS DEFEATED':'WAVE '+ev[1]+' CLEARED',sub:'CHOOSE A PERK',life:3.2,max:3.2,color:'#9bffb5'};sfx('clear');break;
     case 'slam':rings.push({k:9,x:ev[1],y:ev[2],r:ev[3],life:.48,max:.48,c:'#ff8248'});burst(ev[1],ev[2],20,['#b9b9a8','#8f8f84'],6,.5,5,.1,3);addShake(13,ev[1],ev[2]);sfx('thump',ev[1],ev[2]);break;
     case 'tele':rings.push({k:ev[1],x:ev[2],y:ev[3],r:ev[4],life:ev[5],max:ev[5],c:'#ffbd66'});break;
+    case 'tshot':case 'tboom':case 'tflame':case 'tflame2':case 'tbuild':case 'trep':case 'tdie':case 'cardie':tdFx(ev);break;
     case 'ice':{const x=ev[1],y=ev[2],R=ev[3],big=ev[4]>1;
       rings.push({k:9,x,y,r:R,life:.5,max:.5,c:'#8fdcff'});
       burst(x,y,big?46:26,['#ffffff','#d6f0ff','#8fdcff','#4aa8ff'],big?9:6,.8,big?6:5,.3,7);
@@ -3099,7 +3459,7 @@ function draw(dt){
       if(sx||sy){const [wx,wy]=stickToWorld(sx,sy),m=Math.hypot(wx,wy)||1,v=(keys.shift?20:12)*dt;spec.x=clamp(spec.x+wx/m*v,1,world.w-1);spec.y=clamp(spec.y+wy/m*v,world.y0+1,world.h-1)}
       fxp=spec.x;fyp=spec.y;
     }else spec.on=false;
-    if(!COARSE&&me.hp>0&&aimSrc==='mouse'){fxp+=Math.cos(me.angle)*.9;fyp+=Math.sin(me.angle)*.9}
+    if(!COARSE&&me.hp>0&&aimSrc==='mouse'&&!(gameMode==='td'&&tdSel>=0)){fxp+=Math.cos(me.angle)*.9;fyp+=Math.sin(me.angle)*.9}
   }
   const k=1-Math.exp(-dt*9);
   cam.x+=((W/2)-(fxp-fyp)*TILE-cam.x)*k;cam.y+=((H*.48)-(fxp+fyp)*TILE*ISOY-cam.y)*k;
@@ -3138,10 +3498,11 @@ function draw(dt){
   for(const c of corpses)drawList.push({o:c.x+c.y-.2,k:3,e:c});
   for(const p of players)drawList.push({o:p.x+p.y+(p.hp>0?0:-.3),k:4,e:p});
   for(const l of lobs)drawList.push({o:lerp(l.x0,l.tx,l.t/l.dur)+lerp(l.y0,l.ty,l.t/l.dur)+.5,k:5,e:l});
+  if(gameMode==='td'&&!titleOn)for(const t of towers)drawList.push({o:t.x+t.y+(t.solid?.2:-.6),k:6,e:t});
   drawList.sort((a,b)=>a.o-b.o);
   for(const d of drawList){
     if(d.k===0)drawPickup(d.e);else if(d.k===1)drawProp(d.e);else if(d.k===2)drawZombie(d.e);
-    else if(d.k===3)drawZombie(d.e,d.e);else if(d.k===4)drawSurvivor(d.e);else drawLob(d.e);
+    else if(d.k===3)drawZombie(d.e,d.e);else if(d.k===4)drawSurvivor(d.e);else if(d.k===6)drawTower(d.e);else drawLob(d.e);
   }
   if(me&&state!=='menu'&&!titleOn)drawOccludedOutline();
   // acid globs and smoke under the lighting pass
@@ -3253,6 +3614,7 @@ function drawWorldText(){
   ctx.globalAlpha=1;
   if(state!=='playing'&&state!=='over')return;
   drawBubbles();
+  if(gameMode==='td'&&state==='playing'&&!titleOn)drawTdOverlay();
   if(spec.on&&state==='playing'&&!titleOn){ctx.save();ctx.font='800 13px system-ui';ctx.textAlign='center';ctx.fillStyle='#000a';const t='SPECTATING · WASD / ARROWS to look around · SHIFT faster';const w=ctx.measureText(t).width+24;ctx.fillRect(W/2-w/2,H-64,w,26);ctx.fillStyle='#e6f3ff';ctx.fillText(t,W/2,H-46);ctx.restore()}
   for(const p of players){
     const q=project(p.x,p.y);if(!onScreen(q))continue;
@@ -3332,7 +3694,7 @@ function drawScreenFx(dt){
     ctx.globalAlpha=a;label(banner.text,W/2,H*.22,s,banner.color,'#000a');
     if(banner.sub)label(banner.sub,W/2,H*.22+s*.62,Math.min(16,W/26),'#ffffff','#000a');
     ctx.globalAlpha=1;
-  }else if(intermission>0&&wave===startWave-1)label('GET READY',W/2,H*.22,Math.min(40,W/10),'#ffe3a2','#000a');
+  }else if(intermission>0&&wave===startWave-1&&gameMode!=='td')label('GET READY',W/2,H*.22,Math.min(40,W/10),'#ffe3a2','#000a');
   else if(intermission>0)label('NEXT WAVE IN '+Math.ceil(intermission),W/2,H*.2,Math.min(18,W/22),'#ffe3a2','#000a');
 }
 
@@ -4084,6 +4446,150 @@ function drawDustHaze(){
   ctx.restore();
 }
 
+// ---- 68_td.js
+// ============================================================================
+//  Tower Defense: tower art, car health bars, build ghost and effects.
+// ============================================================================
+const tlines=[];
+const TD_ART={
+  turret:{base:'#2f6b3f',top:'#46a060'},cannon:{base:'#7a4a22',top:'#a8702f'},flame:{base:'#6b3b2a',top:'#3a1d12'},wall:{base:'#c62a2f',top:'#e04b4f'}
+};
+const WALL_COL=['#c62a2f','#2f7ac6','#d9a825'];
+function ringEllipse(x,y,r,fill,stroke,alpha){
+  const q=project(x,y,.02),rx=r*TILE*1.414*ISOX,ry=r*TILE*1.414*ISOY;
+  ctx.save();ctx.globalAlpha=alpha;ctx.beginPath();ctx.ellipse(q.x,q.y,rx,ry,0,0,TAU);
+  if(fill){ctx.fillStyle=fill;ctx.fill()}if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=2;ctx.stroke()}ctx.restore();
+}
+function tileDiamond(cx,cy,fill,stroke,half=.5,z=.02){
+  const pts=[project(cx-half,cy-half,z),project(cx+half,cy-half,z),project(cx+half,cy+half,z),project(cx-half,cy+half,z)];
+  poly(pts,fill,stroke);
+}
+function drawTower(t){
+  const T=TD_TYPES[t.type];if(!T)return;
+  const c=project(t.x,t.y);if(!onScreen(c,80))return;
+  const id=T.id,L=t.lvl|0,flash=t.hurtT>0;
+  ctx.save();
+  if(id==='ice'){
+    tileDiamond(t.x,t.y,'#a8dcff66','#eaf8ff',.5);tileDiamond(t.x,t.y,'#d8f1ff44',null,.32);
+    ctx.strokeStyle='#f4fbff';ctx.lineWidth=1.4;
+    for(let i=0;i<6+L*2;i++){const a=i*1.9+t.id,r=.12+(i%3)*.12,q=project(t.x+Math.cos(a)*r*2,t.y+Math.sin(a)*r*2,.04),s=3+Math.sin(clock*4+i)*1.4;ctx.beginPath();ctx.moveTo(q.x-s,q.y);ctx.lineTo(q.x+s,q.y);ctx.moveTo(q.x,q.y-s*.6);ctx.lineTo(q.x,q.y+s*.6);ctx.stroke()}
+  }else if(id==='spike'){
+    tileDiamond(t.x,t.y,'#3a2226','#ffffff30',.5);
+    for(let i=0;i<5+L;i++){
+      const a=i*2.4+t.id,r=i?.26:0,q=project(t.x+Math.cos(a)*r*1.6,t.y+Math.sin(a)*r*1.6,.02),tip=project(t.x+Math.cos(a)*r*1.6,t.y+Math.sin(a)*r*1.6,.42);
+      ctx.fillStyle=i%2?'#ffffff':'#e03a42';ctx.beginPath();ctx.moveTo(q.x-4,q.y);ctx.lineTo(tip.x,tip.y);ctx.lineTo(q.x+4,q.y);ctx.closePath();ctx.fill();
+    }
+  }else if(id==='wall'){
+    const col=WALL_COL[L];
+    box3(t.x-.46,t.y-.46,.92,.92,.78,col,shade(col,28));
+    const a=project(t.x,t.y-.46,.78),b=project(t.x,t.y+.46,.78),c1=project(t.x-.46,t.y,.78),d=project(t.x+.46,t.y,.78);
+    ctx.strokeStyle='#ffe28a';ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.moveTo(c1.x,c1.y);ctx.lineTo(d.x,d.y);ctx.stroke();
+    const bw=project(t.x,t.y,.9);ctx.fillStyle='#ffe28a';ctx.beginPath();ctx.ellipse(bw.x-5,bw.y,6,3.4,-.4,0,TAU);ctx.ellipse(bw.x+5,bw.y,6,3.4,.4,0,TAU);ctx.fill();
+  }else{
+    const A=TD_ART[id];
+    box3(t.x-.44,t.y-.44,.88,.88,.3,A.base,A.top);
+    if(id==='turret'){
+      box3(t.x-.28,t.y-.28,.56,.56,.62,'#c8353c','#e24a52');
+      const s=project(t.x,t.y,.62),e=project(t.x+Math.cos(t.ang)*.75,t.y+Math.sin(t.ang)*.75,.62);
+      ctx.lineCap='round';ctx.strokeStyle='#15181c';ctx.lineWidth=6;ctx.beginPath();ctx.moveTo(s.x,s.y);ctx.lineTo(e.x,e.y);ctx.stroke();
+      ctx.strokeStyle='#9aa4ac';ctx.lineWidth=2.4;ctx.beginPath();ctx.moveTo(s.x,s.y-1);ctx.lineTo(e.x,e.y-1);ctx.stroke();
+      ctx.fillStyle='#ffd447';ctx.font='900 12px system-ui';ctx.textAlign='center';ctx.fillText('★',s.x,s.y-6);
+    }else if(id==='cannon'){
+      box3(t.x-.36,t.y-.36,.72,.72,.8,'#b02a30','#d03f46');
+      const s=project(t.x,t.y,.8),e=project(t.x+Math.cos(t.ang)*.95,t.y+Math.sin(t.ang)*.95,.8);
+      ctx.lineCap='round';ctx.strokeStyle='#111';ctx.lineWidth=10;ctx.beginPath();ctx.moveTo(s.x,s.y);ctx.lineTo(e.x,e.y);ctx.stroke();
+      ctx.strokeStyle='#e0b33a';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(e.x-(e.x-s.x)*.2,e.y-(e.y-s.y)*.2);ctx.lineTo(e.x,e.y);ctx.stroke();
+      const h=project(t.x,t.y,1.05);ctx.fillStyle='#f0d6b0';ctx.beginPath();ctx.arc(h.x,h.y-3,7,0,TAU);ctx.fill();ctx.fillStyle='#17191c';ctx.fillRect(h.x-7,h.y-13,14,6);ctx.fillStyle='#e0b33a';ctx.fillRect(h.x-7,h.y-8,14,2);
+    }else{ // flamer: a glowing yule log
+      const top=project(t.x,t.y,.3);
+      ctx.fillStyle=`rgba(255,${120+Math.sin(clock*9+t.id)*40|0},40,.85)`;ctx.beginPath();ctx.ellipse(top.x,top.y,15,7.5,0,0,TAU);ctx.fill();
+      for(let i=0;i<4;i++){const fx_=top.x-9+i*6,hh=10+Math.sin(clock*11+i*1.7+t.id)*5+L*2;ctx.fillStyle=i%2?'#ffd35a':'#ff7a2a';ctx.beginPath();ctx.moveTo(fx_-4,top.y);ctx.lineTo(fx_,top.y-hh);ctx.lineTo(fx_+4,top.y);ctx.closePath();ctx.fill()}
+    }
+  }
+  if(flash){ctx.globalAlpha=.4;tileDiamond(t.x,t.y,'#ffffff',null,.5,.3)}
+  ctx.globalAlpha=1;
+  // level pips + health
+  if(t.id){
+    const p=project(t.x,t.y+.6,.02);
+    for(let i=0;i<=L;i++){ctx.fillStyle='#ffd447';ctx.strokeStyle='#5a3b10';ctx.lineWidth=1;ctx.beginPath();ctx.arc(p.x+(i-L/2)*9,p.y+4,3.2,0,TAU);ctx.fill();ctx.stroke()}
+    if(t.hp<t.maxHp-.5){
+      const q=project(t.x,t.y,id==='wall'?1.05:id==='cannon'?1.5:1.0),f=clamp(t.hp/t.maxHp,0,1);
+      ctx.fillStyle='#240c16';ctx.fillRect(q.x-17,q.y-14,34,5);ctx.fillStyle=f>.5?'#6fe38a':f>.25?'#ffc857':'#ff5a5a';ctx.fillRect(q.x-17,q.y-14,34*f,5);
+    }
+  }
+  ctx.restore();
+}
+
+function tdTowerAt(mx,my){
+  let best=null,bd=1e9;
+  for(const t of towers){
+    const solid=t.solid,c=project(t.x,t.y,solid?.4:.02);
+    const dx=Math.abs(mx-c.x),dy=my-c.y;
+    const ok=solid?(dx<24&&dy>-34&&dy<20):(dx<32&&Math.abs(dy)<17);
+    if(ok){const d=dx+Math.abs(dy);if(d<bd){bd=d;best=t}}
+  }
+  return best;
+}
+
+function drawCarsOverlay(){
+  for(const c of cars){
+    const q=project(c.x,c.y,1.35);if(!onScreen(q,120))continue;
+    if(!c.alive){
+      ctx.save();ctx.globalAlpha=.5;poly([project(c.rx,c.ry,.35),project(c.rx+c.rw,c.ry,.35),project(c.rx+c.rw,c.ry+c.rh,.35),project(c.rx,c.ry+c.rh,.35)],'#000',null);ctx.restore();
+      for(let i=0;i<3;i++){const s=(clock*.7+i/3)%1,p=project(c.x+Math.sin(i*2+clock)*.3,c.y,.6+s*1.8);ctx.globalAlpha=(1-s)*.5;ctx.fillStyle='#222';ctx.beginPath();ctx.arc(p.x,p.y,8+s*14,0,TAU);ctx.fill()}
+      ctx.globalAlpha=1;ctx.font='900 12px system-ui';ctx.textAlign='center';ctx.fillStyle='#ff7a6a';ctx.strokeStyle='#000a';ctx.lineWidth=3;ctx.strokeText(c.name+' WRECKED',q.x,q.y);ctx.fillText(c.name+' WRECKED',q.x,q.y);continue;
+    }
+    const f=clamp(c.hp/c.max,0,1);
+    ctx.fillStyle='#000a';ctx.fillRect(q.x-34,q.y-6,68,9);ctx.fillStyle=f>.5?'#6fe38a':f>.25?'#ffc857':'#ff5a5a';ctx.fillRect(q.x-33,q.y-5,66*f,7);
+    ctx.font='900 10px system-ui';ctx.textAlign='center';ctx.fillStyle='#fff';ctx.strokeStyle='#000a';ctx.lineWidth=3;ctx.strokeText(c.name,q.x,q.y-10);ctx.fillText(c.name,q.x,q.y-10);
+    if(c.hurtT>0){ctx.globalAlpha=.35;poly([project(c.rx,c.ry,.5),project(c.rx+c.rw,c.ry,.5),project(c.rx+c.rw,c.ry+c.rh,.5),project(c.rx,c.ry+c.rh,.5)],'#ff2a2a',null);ctx.globalAlpha=1}
+  }
+}
+function drawTdOverlay(){
+  drawCarsOverlay();
+  // active gate markers during the build phase
+  if(intermission>0)for(const g of tdActive){const q=project(g.x,g.y,.1);ctx.save();ctx.globalAlpha=.7+Math.sin(clock*4)*.25;ctx.fillStyle='#ff5a5a';ctx.font='900 11px system-ui';ctx.textAlign='center';ctx.strokeStyle='#000a';ctx.lineWidth=3;ctx.strokeText('▼ HORDE ▼',q.x,q.y-10);ctx.fillText('▼ HORDE ▼',q.x,q.y-10);ctx.restore()}
+  // tracers
+  for(let i=tlines.length-1;i>=0;i--){
+    const l=tlines[i],a=1-(clock-l.t0)/l.life;if(a<=0){tlines.splice(i,1);continue}
+    const s=project(l.x0,l.y0,l.z),e=project(l.x1,l.y1,.45);
+    ctx.save();ctx.globalAlpha=a;ctx.strokeStyle=l.c;ctx.lineWidth=l.w;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(s.x,s.y);ctx.lineTo(e.x,e.y);ctx.stroke();ctx.restore();
+  }
+  // selected tower
+  const sel=tdPick?tdFind(tdPick):null;
+  if(sel){
+    const S=tdStat(sel);if(S.range>0)ringEllipse(sel.x,sel.y,S.range,'#7fd8ff22','#7fd8ff',.9);
+    tileDiamond(sel.x,sel.y,'#ffffff22','#ffe17a',.56);
+  }
+  // build ghost
+  if(tdSel>=0&&me&&me.hp>0&&state==='playing'){
+    const T=TD_TYPES[tdSel],g=tdGhost,bad=g.why||(money<T.cost?'NOT ENOUGH MONEY':'');
+    const range=T.range>0?(T.range>2?T.range:T.range):0;
+    if(range>0)ringEllipse(g.x,g.y,range,bad?'#ff5a5a18':'#7dff8a18',bad?'#ff6a6a':'#7dff8a',.85);
+    ctx.save();ctx.globalAlpha=.6;drawTower({id:0,type:tdSel,x:g.x,y:g.y,lvl:0,ang:Math.atan2(g.y-me.y,g.x-me.x),hp:1,maxHp:1,solid:T.solid});ctx.restore();
+    ctx.save();ctx.globalAlpha=.45;tileDiamond(g.x,g.y,bad?'#ff2a2a':'#2aff5a',bad?'#ff8a8a':'#a6ffb4',.5,.05);ctx.restore();
+    const q=project(g.x,g.y,1.7);ctx.save();ctx.font='900 12px system-ui';ctx.textAlign='center';ctx.lineWidth=3;ctx.strokeStyle='#000b';
+    const l1=T.name+'  $'+T.cost,l2=bad||('RANGE '+(T.range>0?T.range:'-'));
+    ctx.strokeText(l1,q.x,q.y);ctx.fillStyle='#fff';ctx.fillText(l1,q.x,q.y);
+    ctx.strokeText(l2,q.x,q.y+14);ctx.fillStyle=bad?'#ff8a8a':'#a6ffb4';ctx.fillText(l2,q.x,q.y+14);ctx.restore();
+  }
+}
+
+// ---------------------------------------------------------------- effects
+function tdFx(ev){
+  switch(ev[0]){
+    case 'tshot':{const k=ev[6];tlines.push({x0:ev[2],y0:ev[3],x1:ev[4],y1:ev[5],z:.62,t0:clock,life:k?.14:.08,c:k?'#ffb347':'#ffe9a0',w:k?5:2.2});
+      burst(ev[2]+(ev[4]-ev[2])*.1,ev[3]+(ev[5]-ev[3])*.1,k?5:2,['#ffe9a0','#ffb347'],2,.15,3,.6);sfx(k?'gun2':'gun0',ev[2],ev[3]);break}
+    case 'tboom':rings.push({k:9,x:ev[1],y:ev[2],r:ev[3],life:.4,max:.4,c:'#ffb347'});burst(ev[1],ev[2],14,['#ffd35a','#ff9a3c','#d8481f','#ffffff'],5,.45,6);sfx('boom',ev[1],ev[2]);break;
+    case 'tflame':fireBurst(ev[1],ev[2],7,ev[3]*.85);sfx('gun4',ev[1],ev[2]);break;
+    case 'tflame2':burst(ev[1],ev[2],4,ev[3]?['#ff5a5a','#ffffff']:['#ffffff','#9fd8ff'],2.4,.4,4);break;
+    case 'tbuild':burst(ev[1],ev[2],12,['#ffd447','#ffffff','#7dff8a','#ff6a6a'],3.2,.6,4,.4);sfx('click',ev[1],ev[2]);break;
+    case 'trep':burst(ev[1],ev[2],4,['#7dff8a','#d9ffe0'],1.8,.5,3,.6);break;
+    case 'tdie':burst(ev[1],ev[2],18,['#8a5a2c','#c62a2f','#ffd447','#444'],5,.7,5);rings.push({k:9,x:ev[1],y:ev[2],r:1.6,life:.35,max:.35,c:'#ffb061'});sfx('clang',ev[1],ev[2]);break;
+    case 'cardie':burst(ev[1],ev[2],40,['#ffd35a','#ff7a2a','#333','#888'],8,.9,8,.5);fireBurst(ev[1],ev[2],20,1.8);addShake(14,ev[1],ev[2]);sfx('bigBoom',ev[1],ev[2]);break;
+  }
+}
+
 // ---- 70_ui.js
 // ============================================================================
 //  UI: menus, lobby, HUD, input (keyboard + mouse, touch, gamepad), main loop
@@ -4126,7 +4632,7 @@ function enterGame(){
 function startSolo(){
   unlockAudio();if(net)netLeave();
   settings.name=myName();saveSettings();
-  applyMap($('mapSel').value);reset();me=makePlayer('solo',chosenCharacter,settings.name,0);players=[me];
+  gameMode=$('modeSel').value==='td'?'td':'arena';applyMap(gameMode==='td'?'mall':$('mapSel').value);reset();me=makePlayer('solo',chosenCharacter,settings.name,0);players=[me];
   const nb=clamp(Math.floor(Number($('botCount').value)||0),0,7);store.set('bots',nb);if(nb)addBots(nb);
   enterGame();
 }
@@ -4148,7 +4654,7 @@ function endGame(){
   showScreen('scrOver');
 }
 function toMenu(){
-  state='menu';players=[];me=null;zombies=[];bullets=[];eprojs=[];lobs=[];hazards=[];pickups=[];radioOn=false;
+  state='menu';gameMode='arena';towers=[];cars=[];tdSel=-1;tdPick=0;players=[];me=null;zombies=[];bullets=[];eprojs=[];lobs=[];hazards=[];pickups=[];radioOn=false;
   clearFx();build();buildFloor();mmBg=null;
   $('bestLine').textContent=bestLine();setStatus('');showScreen('scrMain');
 }
@@ -4286,6 +4792,7 @@ addEventListener('keydown',e=>{
   if([' ','arrowup','arrowdown','arrowleft','arrowright','tab'].includes(k))e.preventDefault();
   if(e.repeat)return;
   unlockAudio();
+  if(k==='escape'&&gameMode==='td'&&state==='playing'&&(tdSel>=0||tdPick)){tdSel=-1;tdPick=0;return}
   if(k==='escape'||k==='p'){togglePause();return}
   if(k==='m'){setMuted(!AU.muted);return}
   if(k==='enter'&&state==='playing'&&me&&!overlayOpen()&&!COARSE){e.preventDefault();openChat();return}
@@ -4298,7 +4805,11 @@ addEventListener('keydown',e=>{
   else if(k==='q')doAct('swap',{d:1});
   else if(k==='g')doNade();
   else if(k==='shift'||k===' ')doDash();
-  else if(k.length===1&&k>='1'&&k<='7'){const n=+k-1;if(me.offer&&n<3&&me.offer[n])doAct('perk',{i:n});else doAct('gun',{n})}
+  else if(gameMode==='td'&&k.length===1&&k>='1'&&k<='6')tdSelect(+k-1);
+  else if(gameMode==='td'&&k==='u')tdDoUpgrade();
+  else if(gameMode==='td'&&k==='x')tdDoSell();
+  else if(gameMode==='td'&&k==='n')doAct('tskip');
+  else if(k.length===1&&k>='1'&&k<='7'&&gameMode!=='td'){const n=+k-1;if(me.offer&&n<3&&me.offer[n])doAct('perk',{i:n});else doAct('gun',{n})}
 });
 addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false});
 function clearHeld(){for(const k of Object.keys(keys))keys[k]=false;mouse.down=false;actHeld=false}
@@ -4318,6 +4829,7 @@ canvas.addEventListener('pointerdown',e=>{
   unlockAudio();
   if(e.pointerType==='mouse'){
     aimSrc='mouse';mouse.x=e.clientX;mouse.y=e.clientY;
+    if(tdClick(e))return;
     if(e.button===0)mouse.down=true;else if(e.button===2)doNade();
     return;
   }
@@ -4405,13 +4917,14 @@ function hudUpdate(){
   else{setText('ammoBig',me.reload>0?'RELOADING':(COARSE?GUNS[me.weapon].name+' ':'')+am+' / '+clip);
   $('ammoBig').className=me.reload<=0&&am<=clip*.2?'low':''}
   setHTML('subInfo',`<span>💣 ${me.grenades}</span><span style="color:${me.dashCd>0?'#ffffff66':'#9fe3ff'}">DASH ${me.dashCd>0?'…':'READY'}</span>`);
+  updateTdHud();
   // perk draft
   const of=me.offer&&state==='playing'?me.offer.join(','):'';
   if(hudKey.offer!==of){
     hudKey.offer=of;const root=$('perks');root.innerHTML='';root.style.display=of?'flex':'none';
     if(of)me.offer.forEach((k,i)=>{
       const d=document.createElement('div');d.className='perk';const lv=pk(me,k);
-      d.innerHTML=`<em>${PERKS[k].i}</em><b>${PERKS[k].n}${lv?' '+'I'.repeat(lv+1):''}</b><span>${PERKS[k].d}</span><kbd>${COARSE?'TAP':'PRESS '+(i+1)}</kbd>`;
+      d.innerHTML=`<em>${PERKS[k].i}</em><b>${PERKS[k].n}${lv?' '+'I'.repeat(lv+1):''}</b><span>${PERKS[k].d}</span><kbd>${COARSE||gameMode==='td'?(COARSE?'TAP':'CLICK'):'PRESS '+(i+1)}</kbd>`;
       d.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();doAct('perk',{i})});root.appendChild(d);
     });
   }
@@ -4424,16 +4937,26 @@ function hudUpdate(){
 function click(id,fn){$(id).addEventListener('click',e=>{unlockAudio();sfx('click');fn(e)})}
 let settingsBack='scrMain';
 $('mapSel').value=(MAPS[store.get('map','mall')]?store.get('map','mall'):'mall');
+function mainModes(){
+  const root=$('modes');root.innerHTML='';
+  for(const [id,label,sub] of [['arena','ARENA','Survive the waves'],['td','TOWER DEFENSE','Build towers, guard two E30s']]){
+    const b=document.createElement('button');b.type='button';b.className='modeChoice'+($('modeSel').value===id?' selected':'');
+    b.innerHTML='<b>'+label+'</b><span>'+sub+'</span>';
+    b.onclick=()=>{sfx('click');$('modeSel').value=id;store.set('mode',id);if(id==='td'){$('mapSel').value='mall'}mainModes();mainMaps()};root.appendChild(b);
+  }
+}
 function mainMaps(){
   const root=$('maps');root.innerHTML='';
-  for(const id of ['mall','metro','city','dust']){
+  root.style.gridTemplateColumns=$('modeSel').value==='td'?'minmax(0,240px)':'';
+  for(const id of ($('modeSel').value==='td'?['mall']:['mall','metro','city','dust'])){
     const b=document.createElement('button');b.type='button';b.className='mapChoice'+($('mapSel').value===id?' selected':'');
     const im=document.createElement('img');im.src=(MAP_THUMBS[id]||MAP_THUMBS.city);im.alt=MAPS[id].name;b.appendChild(im);
     const t=document.createElement('span');t.textContent=MAPS[id].name;b.appendChild(t);
     b.onclick=()=>{sfx('click');$('mapSel').value=id;store.set('map',id);mainMaps()};root.appendChild(b);
   }
 }
-mainMaps();
+$('modeSel').value=store.get('mode','arena')==='td'?'td':'arena';if($('modeSel').value==='td')$('mapSel').value='mall';
+mainModes();mainMaps();
 $('botCount').value=String(clamp(Number(store.get('bots',0))||0,0,7));
 click('start',startSolo);
 click('createRoom',()=>{settings.name=myName();saveSettings();netConnect(()=>netSend({t:'create',name:settings.name,character:chosenCharacter}))});
@@ -4444,7 +4967,7 @@ click('setBtn',()=>{settingsBack='scrMain';showScreen('scrSettings')});
 click('pauseSet',()=>{settingsBack='scrPause';showScreen('scrSettings')});
 for(const b of document.querySelectorAll('.back'))b.addEventListener('click',()=>{sfx('click');showScreen(curScreen==='scrSettings'?settingsBack:'scrMain')});
 click('readyBtn',()=>{const m=netMembers.find(x=>x.id===netId);netSend({t:'ready',ready:!(m&&m.ready)})});
-click('hostStart',()=>netSend({t:'start',map:$('mapSel').value,wave:clamp(Math.floor(Number($('waveTest').value)||1),1,100)}));
+click('hostStart',()=>netSend({t:'start',mode:$('modeSel').value==='td'?'td':'arena',map:$('mapSel').value,wave:clamp(Math.floor(Number($('waveTest').value)||1),1,100)}));
 click('leaveRoom',()=>{netLeave();setStatus('');showScreen('scrMain')});
 click('copyLink',()=>{
   const url=location.origin+location.pathname+'?room='+netCode;
@@ -4508,7 +5031,7 @@ try{
 addEventListener('resize',resize);
 if(window.visualViewport)visualViewport.addEventListener('resize',resize);
 resize();build();buildFloor();mainChars();
-$('ver').textContent='V60';$('bestLine').textContent=bestLine();
+$('ver').textContent='V61';$('bestLine').textContent=bestLine();
 showScreen(QUERY.get('room')?'scrMain':'scrTitle');
 if(location.protocol==='file:')setStatus('Solo works from this file. Online co-op needs the server (npm start).');
 const inviteCode=(QUERY.get('room')||'').toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,6);
@@ -4527,6 +5050,93 @@ window.MOTD={
   hurt(n){if(me&&!isClient())hurtPlayer(me,n,{pure:true})},
   me:()=>me
 };
+
+// ---- 72_tdui.js
+// ============================================================================
+//  Tower Defense HUD, build selection, ghost placement and tower panel.
+// ============================================================================
+const tdGhost={x:0,y:0,why:'',key:''};
+let tdHudBuilt=false,tdHudKey={};
+function tdDesc(type,lvl){
+  const T=TD_TYPES[type],S=tdStat({type,lvl});
+  switch(T.id){
+    case 'turret':return `DMG ${Math.round(S.dmg)} per shot · ${(1/S.rate).toFixed(1)} shots/s`;
+    case 'cannon':return `DMG ${Math.round(S.dmg)} splash · ${(1/S.rate).toFixed(2)} shots/s`;
+    case 'flame':return `DMG ${Math.round(S.dmg)}/s to everything in range + burn`;
+    case 'ice':return `Slows zombies to ${Math.round(S.slow*100)}% speed`;
+    case 'spike':return `DMG ${Math.round(S.dmg)}/s to zombies on it`;
+    default:return 'Solid. Zombies must break it';
+  }
+}
+function tdBuildHud(){
+  const bar=$('tdBar');bar.innerHTML='';
+  TD_TYPES.forEach((T,i)=>{
+    const d=document.createElement('div');d.className='tdSlot';d.id='tdS'+i;
+    d.innerHTML=`<b>${i+1} · ${T.name}</b><em>$${T.cost}</em> <span style="opacity:.7">${T.blurb.split('.')[0].slice(0,22)}</span>`;
+    d.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();tdSelect(i)});
+    bar.appendChild(d);
+  });
+  tdHudBuilt=true;
+}
+function tdSelect(n){
+  if(!me||state!=='playing'||overlayOpen())return;
+  tdPick=0;tdSel=tdSel===n?-1:n;tdGhost.key='';sfx('click');
+}
+function tdUpdateGhost(){
+  if(tdSel<0||!me)return;
+  const q=unproject(mouse.x,mouse.y),cx=tdSnap(q.x),cy=tdSnap(q.y);
+  const key=cx+','+cy+','+tdSel+','+tdVer+','+Math.floor(me.x*2)+','+Math.floor(me.y*2);
+  if(key!==tdGhost.key){tdGhost.key=key;tdGhost.x=cx;tdGhost.y=cy;tdGhost.why=tdWhyNot(tdSel,cx,cy,false)}
+}
+function tdPlace(){
+  if(tdSel<0||!me||me.hp<=0)return;
+  const T=TD_TYPES[tdSel],why=tdGhost.why||(money<T.cost?'NOT ENOUGH MONEY':'');
+  if(why){toast(why);return}
+  doAct('tbuild',{n:tdSel,x:tdGhost.x,y:tdGhost.y});
+}
+function tdClick(e){ // returns true when the click was used up by the build system
+  if(!isTD()||!me||state!=='playing')return false;
+  if(e.button===2&&(tdSel>=0||tdPick)){tdSel=-1;tdPick=0;return true}
+  if(e.button!==0)return false;
+  if(tdSel>=0){tdUpdateGhost();tdPlace();return true}
+  const t=tdTowerAt(e.clientX,e.clientY);
+  if(t){tdPick=t.id;sfx('click');return true}
+  tdPick=0;return false;
+}
+function tdDoUpgrade(){if(tdPick)doAct('tup',{i:tdPick})}
+function tdDoSell(){if(tdPick){doAct('tsell',{i:tdPick});tdPick=0}}
+function updateTdHud(){
+  const on=isTD()&&state==='playing'&&!!me;
+  document.body.classList.toggle('td',on);
+  if(!on)return;
+  if(!tdHudBuilt)tdBuildHud();
+  tdUpdateGhost();
+  // money + cars
+  let h=`<div id="tdMoney">$${Math.floor(money)}</div>`;
+  for(const c of cars)h+=`<div class="tdCar${c.alive?'':' dead'}">${c.name}${c.alive?'':' · WRECKED'}<i style="transform:scaleX(${clamp(c.hp/c.max,0,1)});background:${c.hp/c.max>.5?'#6fe38a':c.hp/c.max>.25?'#ffc857':'#ff5a5a'}"></i></div>`;
+  const hk=h.replace(/scaleX\([^)]*\)/g,m=>m.slice(0,12));
+  if(tdHudKey.top!==h){tdHudKey.top=h;$('tdTop').innerHTML=h}
+  const ph=intermission>0?`BUILD PHASE · ${Math.ceil(intermission)}s · N = START WAVE NOW`+(tdActive.length?` · ${tdActive.length} GATE${tdActive.length>1?'S':''} NEXT`:''):'';
+  setText('tdPhase',ph);
+  TD_TYPES.forEach((T,i)=>{const el=$('tdS'+i);if(!el)return;const cls='tdSlot'+(tdSel===i?' sel':'')+(money<T.cost?' poor':'');if(el.className!==cls)el.className=cls});
+  // panel
+  const panel=$('tdPanel'),sel=tdPick?tdFind(tdPick):null;if(tdPick&&!sel)tdPick=0;
+  let key='',html='';
+  if(tdSel>=0){
+    const T=TD_TYPES[tdSel];key='b'+tdSel;
+    html=`<h4>${T.name}</h4><p>${T.blurb}</p><p>${tdDesc(tdSel,0)}</p><p>COST $${T.cost} · RANGE ${T.range||'—'} · HEALTH ${T.hp}</p><p style="opacity:.6">Click to place · Right click / Esc cancel</p>`;
+  }else if(sel){
+    const T=TD_TYPES[sel.type],S=tdStat(sel),uc=tdUpCost(sel);
+    key='t'+sel.id+'.'+sel.lvl+'.'+Math.ceil(sel.hp/10)+'.'+(money>=uc?1:0);
+    html=`<h4>${T.name} · LEVEL ${sel.lvl+1}</h4><p>${tdDesc(sel.type,sel.lvl)}</p><p>HEALTH ${Math.ceil(sel.hp)} / ${sel.maxHp} · RANGE ${S.range>0?S.range.toFixed(1):'—'}</p><div class="btns"><button id="tdUp" type="button"${uc&&money>=uc?'':' disabled'}>${uc?`UPGRADE (U) $${uc}`:'MAX LEVEL'}</button><button id="tdSellB" type="button">SELL (X) +$${tdSellValue(sel)}</button></div><p style="opacity:.6">Hold E next to it to repair</p>`;
+  }
+  if(tdHudKey.panel!==key){
+    tdHudKey.panel=key;panel.style.display=key?'block':'none';panel.innerHTML=html;
+    const u=$('tdUp'),s=$('tdSellB');
+    if(u)u.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();tdDoUpgrade()});
+    if(s)s.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();tdDoSell()});
+  }
+}
 
 })();
 </script>

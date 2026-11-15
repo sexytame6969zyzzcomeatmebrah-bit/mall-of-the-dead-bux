@@ -96,7 +96,7 @@ wss.on('connection',ws=>{
       room.members.push(member);ws.room=room;
       send(ws,{t:'joined',id:ws.pid,code:room.code});
       if(room.started){ // drop-in: join a run that is already going
-        send(ws,{t:'begin',late:true,host:room.members[0].id,members:room.members.map(publicMember),wave:room.wave,map:room.map});
+        send(ws,{t:'begin',late:true,host:room.members[0].id,members:room.members.map(publicMember),wave:room.wave,map:room.map,mode:room.mode});
         broadcast(room,{t:'arrive',member:publicMember(member)},ws);
       }
       lobby(room);
@@ -121,8 +121,8 @@ wss.on('connection',ws=>{
         else send(ws,{t:'error',message:'Character already taken'});
       }else if(msg.t==='ready'){member.ready=!!msg.ready;lobby(room)}
       else if(msg.t==='start'&&isHost&&room.members.every(m=>m.ready||m===member)){
-        room.started=true;room.map=['metro','city','dust'].includes(msg.map)?msg.map:'mall';room.wave=Math.max(1,Math.min(100,Math.floor(Number(msg.wave))||1));
-        broadcast(room,{t:'begin',host:member.id,members:room.members.map(publicMember),wave:room.wave,map:room.map});
+        room.started=true;room.mode=msg.mode==='td'?'td':'arena';room.map=room.mode==='td'?'mall':(['metro','city','dust'].includes(msg.map)?msg.map:'mall');room.wave=Math.max(1,Math.min(100,Math.floor(Number(msg.wave))||1));
+        broadcast(room,{t:'begin',host:member.id,members:room.members.map(publicMember),wave:room.wave,map:room.map,mode:room.mode});
         lobby(room);
       }
       return;
