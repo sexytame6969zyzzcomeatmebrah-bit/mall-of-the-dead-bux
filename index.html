@@ -1753,7 +1753,7 @@ function updateZombies(dt){
       zombieStep(z,ax,ay,spd,dt);z.stride+=spd*dt*5;
       if(def.boss){z.sT=(z.sT||0)+dt;if(z.sT>=.7){const m=Math.hypot(z.x-(z.sx==null?z.x:z.sx),z.y-(z.sy==null?z.y:z.sy));z.stuck=m<.18?(z.stuck||0)+1:0;z.sx=z.x;z.sy=z.y;z.sT=0;if(z.stuck>=2&&dist>2.2){bossUnstick(z);z.stuck=0}}}
     }
-    if(t.car)tdCarAttack(z,def,t.car);
+    if(false){}
     else if(dist<def.reach&&z.attack<=0){z.attack=def.atk||.8;if(hurtPlayer(t,def.dmg))fx(['shake',6,r2(t.x),r2(t.y)])}
     else if(door.solid&&z.attack<=0){ // break the office door down
       const cx=clamp(z.x,door.x,door.x+door.w),cy=clamp(z.y,door.y,door.y+door.h);
@@ -2747,7 +2747,6 @@ function playFx(ev){
     case 'clear':banner={text:ev[2]?'BOSS DEFEATED':'WAVE '+ev[1]+' CLEARED',sub:'CHOOSE A PERK',life:3.2,max:3.2,color:'#9bffb5'};sfx('clear');break;
     case 'slam':rings.push({k:9,x:ev[1],y:ev[2],r:ev[3],life:.48,max:.48,c:'#ff8248'});burst(ev[1],ev[2],20,['#b9b9a8','#8f8f84'],6,.5,5,.1,3);addShake(13,ev[1],ev[2]);sfx('thump',ev[1],ev[2]);break;
     case 'tele':rings.push({k:ev[1],x:ev[2],y:ev[3],r:ev[4],life:ev[5],max:ev[5],c:'#ffbd66'});break;
-    case 'tshot':case 'tboom':case 'tflame':case 'tflame2':case 'tbuild':case 'trep':case 'tdie':case 'cardie':tdFx(ev);break;
     case 'ice':{const x=ev[1],y=ev[2],R=ev[3],big=ev[4]>1;
       rings.push({k:9,x,y,r:R,life:.5,max:.5,c:'#8fdcff'});
       burst(x,y,big?46:26,['#ffffff','#d6f0ff','#8fdcff','#4aa8ff'],big?9:6,.8,big?6:5,.3,7);
@@ -4605,7 +4604,6 @@ canvas.addEventListener('pointerdown',e=>{
   unlockAudio();
   if(e.pointerType==='mouse'){
     aimSrc='mouse';mouse.x=e.clientX;mouse.y=e.clientY;
-    if(tdClick(e))return;
     if(e.button===0)mouse.down=true;else if(e.button===2)doNade();
     return;
   }
