@@ -123,7 +123,7 @@ wss.on('connection',ws=>{
       else if(msg.t==='team'){member.team=msg.team===1?1:0;lobby(room)}
       else if(msg.t==='opts'&&isHost){room.vs=!!msg.vs;lobby(room)}
       else if(msg.t==='start'&&isHost&&room.members.every(m=>m.ready||m===member)){
-        room.started=true;room.mode=msg.mode==='ffa'?'ffa':msg.mode==='tdm'?'tdm':'arena';room.map=['metro','city','dust'].includes(msg.map)?msg.map:'mall';room.wave=Math.max(1,Math.min(100,Math.floor(Number(msg.wave))||1));
+        room.started=true;room.mode=msg.mode==='ffa'?'ffa':msg.mode==='tdm'?'tdm':'arena';room.map=(['metro','city','dust'].includes(msg.map)||(['ship','dunes'].includes(msg.map)&&room.mode!=='arena'))?msg.map:'mall';room.wave=Math.max(1,Math.min(100,Math.floor(Number(msg.wave))||1));
         broadcast(room,{t:'begin',host:member.id,members:room.members.map(publicMember),wave:room.wave,map:room.map,mode:room.mode});
         lobby(room);
       }
