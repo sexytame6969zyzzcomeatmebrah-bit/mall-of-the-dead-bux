@@ -188,6 +188,9 @@ p{color:#d5e0e9;line-height:1.45;margin:8px 0;font-size:13px}
 #pvFeed i{font-style:normal;opacity:.7;margin:0 6px;font-size:10px}
 @keyframes pvf{0%{opacity:0;transform:translateX(20px)}6%{opacity:1;transform:none}85%{opacity:1}100%{opacity:0}}
 .pvwin{font-size:26px;font-weight:900;letter-spacing:.1em;margin:6px 0 10px;text-align:center}
+#teamPick button{border:2px solid #526475;background:#18293a;color:#fff;font-weight:800}
+#teamPick #teamR.sel{border-color:#ff5a5a;background:#5a2020}#teamPick #teamB.sel{border-color:#4aa8ff;background:#1d3f66}
+#pvLabel{display:none}
 
 </style>
 </head>
@@ -258,6 +261,7 @@ p{color:#d5e0e9;line-height:1.45;margin:8px 0;font-size:13px}
       <div class="mapPick" id="maps" aria-label="Choose a map"></div><input type="hidden" id="mapSel" value="mall">
       <button class="big" id="start" type="button">START SOLO SURVIVAL</button>
       <label class="set" id="botLabel">AI TEAMMATES (solo or hosted room) <select id="botCount"><option value="0">None</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7 (full squad of 8)</option></select></label>
+      <label class="set" id="pvLabel">TEAM DEATHMATCH <select id="aiSide"><option value="mix">AI fills both teams</option><option value="vs">Humans vs AI (all AI on the other team)</option></select> <select id="teamSel"><option value="0">I play RED</option><option value="1">I play BLUE</option></select></label>
       <div class="btnRow">
         <button id="createRoom" type="button">HOST ONLINE ROOM</button>
         <button id="joinRoom" type="button">JOIN ROOM</button>
@@ -280,6 +284,8 @@ p{color:#d5e0e9;line-height:1.45;margin:8px 0;font-size:13px}
       <button id="copyLink" type="button">COPY INVITE LINK</button>
       <div id="netStatus" class="status"></div>
       <div id="roomRoster"></div>
+      <div class="btnRow" id="teamPick"><button id="teamR" type="button">RED TEAM</button><button id="teamB" type="button">BLUE TEAM</button></div>
+      <div id="vsNote" class="status"></div>
       <div class="chars" id="onlineCharacters"></div>
       <div class="btnRow">
         <button id="readyBtn" type="button">READY</button>
@@ -2111,7 +2117,7 @@ function update(dt){
 const TEAM_COL=['#ff5a5a','#4aa8ff'],TEAM_NAME=['RED','BLUE'];
 const PV_RESP=3,PV_PROT=2,PV_TIME=480;
 const PV_MUL=[1,.8,.3,.32,.35,.07,.5]; // zombie damage -> player damage, per gun
-let pv={ph:'play',tl:PV_TIME,lim:20,ts:[0,0],win:null,rs:[]},pvSpots=[],pvPick=0;
+let pvVs=false,pv={ph:'play',tl:PV_TIME,lim:20,ts:[0,0],win:null,rs:[]},pvSpots=[],pvPick=0;
 
 function pvTeamOf(p){return gameMode==='tdm'?(p.team||0):p.id}
 const pvFoes=(a,b)=>a!==b&&(gameMode==='ffa'||(a.team||0)!==(b.team||0));
@@ -2131,11 +2137,15 @@ function pvStart(){
   pv={ph:'play',tl:PV_TIME,lim:gameMode==='tdm'?30:20,ts:[0,0],win:null,rs:[]};pvPick=0;intermission=0;wave=1;
   teamOwned=0;for(let i=0;i<GUNS.length;i++)if(i!==MINI)teamOwned|=1<<i;
   pvCells();
-  players.forEach((p,i)=>{p.team=i%2;p.kills=0;p.deaths=0;p.score=0;p.perks={};p.offer=null;p.respT=0;if(netHost||!netPlaying)pvSpawn(p)});
+  pvVs=gameMode==='tdm'&&$('aiSide').value==='vs';
+  const hum=players.filter(p=>!p.bot),ht=hum.length?(hum[0].pteam|0):0,cnt=[0,0];
+  for(const p of hum){p.team=pvVs?ht:(p.pteam|0);cnt[p.team]++}
+  for(const p of players)if(p.bot){p.team=pvVs?1-ht:(cnt[0]<=cnt[1]?0:1);cnt[p.team]++}
+  players.forEach((p,i)=>{p.kills=0;p.deaths=0;p.score=0;p.perks={};p.offer=null;p.respT=0;if(netHost||!netPlaying)pvSpawn(p)});
 }
 function pvJoin(p){ // drop-in: put the newcomer on the smaller team
-  const n=[0,0];for(const q of players)if(q!==p)n[q.team||0]++;
-  p.team=n[0]<=n[1]?0:1;p.kills=0;p.deaths=0;p.score=0;pvSpawn(p);
+  const n=[0,0],h=players.find(q=>q!==p&&!q.bot);for(const q of players)if(q!==p)n[q.team||0]++;
+  p.team=pvVs&&h?(h.team||0):(p.pteam!=null&&!pvVs?p.pteam:n[0]<=n[1]?0:1);p.kills=0;p.deaths=0;p.score=0;pvSpawn(p);
 }
 function pvSpawn(p){
   let best=null,bs=-1;
@@ -2346,7 +2356,7 @@ function pvResultHTML(){
 //   - replay the host's effect events so sound and gore match
 //  If the host leaves, the next player takes over the simulation in place.
 // ============================================================================
-let net=null,netId=null,netHost=false,netPlaying=false,netMembers=[],netCode='',netPing=0,hostId=null;
+let netVs=false,net=null,netId=null,netHost=false,netPlaying=false,netMembers=[],netCode='',netPing=0,hostId=null;
 let netSnapTimer=0,netInputTimer=0,netPingTimer=0,snapDur=.05,lastSnapAt=0,snapSeq=0,rejoinCode='';
 const zMap=new Map();
 const isClient=()=>netPlaying&&!netHost;
@@ -2380,14 +2390,14 @@ function handleNet(msg){
     case 'error':setStatus(msg.message);toast(msg.message);break;
     case 'joined':netId=msg.id;netCode=msg.code;try{history.replaceState(null,'','?room='+netCode)}catch(e){}break;
     case 'lobby':
-      netMembers=msg.members||[];hostId=msg.host;netCode=msg.code;
+      netMembers=msg.members||[];hostId=msg.host;netCode=msg.code;netVs=!!msg.vs;
       if(!netPlaying){netHost=hostId===netId;lobbyDraw();if(curScreen!=='scrLobby'&&state==='menu')showScreen('scrLobby')}
       break;
     case 'begin':beginNet(msg);break;
     case 'arrive':
       if(netPlaying)toast((msg.member.name||'Survivor')+' joined the fight');
       if(netPlaying&&netHost&&!playerById(msg.member.id)){
-        const p=makePlayer(msg.member.id,msg.member.character,msg.member.name,players.length);
+        const p=makePlayer(msg.member.id,msg.member.character,msg.member.name,players.length);p.pteam=msg.member.team|0;
         const lead=players.find(q=>q.hp>0)||me;p.x=lead.x;p.y=lead.y;p.invuln=3;p.tp=1;players.push(p);if(isPvp())pvJoin(p);
       }
       break;
@@ -2418,12 +2428,13 @@ function beginNet(msg){
   applyMap(msg.map);
   reset();zMap.clear();lastSnapAt=performance.now();snapDur=.05;
   players=[];me=null;
-  msg.members.forEach((m,i)=>{const p=makePlayer(m.id,m.character,m.name,i);players.push(p);if(m.id===netId)me=p});
+  msg.members.forEach((m,i)=>{const p=makePlayer(m.id,m.character,m.name,i);p.pteam=m.team|0;players.push(p);if(m.id===netId)me=p});
   if(!me){me=makePlayer(netId,0,settings.name,players.length);players.push(me)}
   if(!netHost)me.tp=-1; // adopt whatever position the host assigns first
   if(netHost){const nb=clamp(Math.floor(Number($('botCount').value)||0),0,Math.max(0,8-players.length));if(nb)addBots(nb)}
   if(isPvp())pvStart();
   enterGame();
+  if(netHost&&msg.mode==='arena'&&['ffa','tdm'].includes($('modeSel').value))toast('Your server is still the OLD version, so it started Arena. Upload the new server.js, redeploy, and try again.');
 }
 
 // ---------------------------------------------------------------- host side
@@ -4411,7 +4422,7 @@ function startSolo(){
   unlockAudio();if(net)netLeave();
   settings.name=myName();saveSettings();
   gameMode=['ffa','tdm'].includes($('modeSel').value)?$('modeSel').value:'arena';applyMap($('mapSel').value);reset();me=makePlayer('solo',chosenCharacter,settings.name,0);players=[me];
-  let nb=clamp(Math.floor(Number($('botCount').value)||0),0,7);store.set('bots',nb);if(isPvp())nb=Math.max(nb,3);if(nb)addBots(nb);
+  me.pteam=+$('teamSel').value;let nb=clamp(Math.floor(Number($('botCount').value)||0),0,7);store.set('bots',nb);if(isPvp())nb=Math.max(nb,3);if(nb)addBots(nb);
   if(isPvp())pvStart();
   enterGame();
 }
@@ -4454,11 +4465,14 @@ function togglePause(){
 }
 
 // ---------------------------------------------------------------- lobby
+click('teamR',()=>netSend({t:'team',team:0}));click('teamB',()=>netSend({t:'team',team:1}));
 function lobbyDraw(){
   const mine=netMembers.find(m=>m.id===netId);
   $('roomCode').textContent=netCode||'';
-  $('roomRoster').innerHTML=netMembers.map(m=>`<div class="r"><span>${m.id===hostId?'👑 ':''}${escapeHTML(m.name)}${m.id===netId?' (you)':''} · ${(characters[m.character]||characters[0]).name}</span><span class="${m.ready||m.id===hostId?'ok':'wait'}">${m.id===hostId?'HOST':m.ready?'✔ READY':'○ NOT READY'}</span></div>`).join('');
+  $('roomRoster').innerHTML=netMembers.map(m=>`<div class="r"><span><i class="dot" style="background:${TEAM_COL[m.team|0]}"></i> ${m.id===hostId?'👑 ':''}${escapeHTML(m.name)}${m.id===netId?' (you)':''} · ${(characters[m.character]||characters[0]).name}</span><span class="${m.ready||m.id===hostId?'ok':'wait'}">${m.id===hostId?'HOST':m.ready?'✔ READY':'○ NOT READY'}</span></div>`).join('');
   buildChars($('onlineCharacters'),mine?mine.character:-1,i=>netSend({t:'select',character:i}),i=>netMembers.some(m=>m.character===i&&m.id!==netId));
+  $('teamR').className=mine&&!mine.team?'sel':'';$('teamB').className=mine&&mine.team?'sel':'';
+  $('vsNote').textContent=netVs?'Team Deathmatch: HUMANS vs AI. Everyone plays on the host\'s team.':'Team Deathmatch only: pick RED or BLUE.';
   $('readyBtn').style.display=netHost?'none':'block';$('readyBtn').textContent=mine&&mine.ready?'NOT READY':'READY UP';
   const allReady=netMembers.every(m=>m.ready||m.id===hostId);
   $('hostStart').style.display=netHost?'block':'none';$('hostStart').disabled=!allReady;
@@ -4712,6 +4726,7 @@ function click(id,fn){$(id).addEventListener('click',e=>{unlockAudio();sfx('clic
 let settingsBack='scrMain';
 $('mapSel').value=(MAPS[store.get('map','mall')]?store.get('map','mall'):'mall');
 function mainModes(){
+  $('pvLabel').style.display=$('modeSel').value==='tdm'?'block':'none';
   const root=$('modes');root.innerHTML='';
   for(const [id,label,sub] of [['arena','ARENA','Survive the waves'],['ffa','FREE FOR ALL','Every survivor for themselves'],['tdm','TEAM DEATHMATCH','Red vs blue, first team to 30 kills']]){
     const b=document.createElement('button');b.type='button';b.className='modeChoice'+($('modeSel').value===id?' selected':'');
@@ -4730,6 +4745,8 @@ function mainMaps(){
 }
 {const m=store.get('mode','arena');$('modeSel').value=m==='ffa'||m==='tdm'?m:'arena'}
 mainModes();mainMaps();
+$('aiSide').value=store.get('aiSide','mix')==='vs'?'vs':'mix';$('teamSel').value=String(store.get('team',0)===1?1:0);
+$('aiSide').onchange=()=>store.set('aiSide',$('aiSide').value);$('teamSel').onchange=()=>store.set('team',+$('teamSel').value);
 $('botCount').value=String(clamp(Number(store.get('bots',0))||0,0,7));
 click('start',startSolo);
 click('createRoom',()=>{settings.name=myName();saveSettings();netConnect(()=>netSend({t:'create',name:settings.name,character:chosenCharacter}))});
@@ -4740,7 +4757,7 @@ click('setBtn',()=>{settingsBack='scrMain';showScreen('scrSettings')});
 click('pauseSet',()=>{settingsBack='scrPause';showScreen('scrSettings')});
 for(const b of document.querySelectorAll('.back'))b.addEventListener('click',()=>{sfx('click');showScreen(curScreen==='scrSettings'?settingsBack:'scrMain')});
 click('readyBtn',()=>{const m=netMembers.find(x=>x.id===netId);netSend({t:'ready',ready:!(m&&m.ready)})});
-click('hostStart',()=>netSend({t:'start',mode:$('modeSel').value==='td'?'td':$('modeSel').value==='run'?'run':'arena',map:$('mapSel').value,wave:clamp(Math.floor(Number($('waveTest').value)||1),1,100)}));
+click('hostStart',()=>{netSend({t:'opts',vs:$('aiSide').value==='vs'});netSend({t:'start',mode:['ffa','tdm'].includes($('modeSel').value)?$('modeSel').value:'arena',map:$('mapSel').value,wave:clamp(Math.floor(Number($('waveTest').value)||1),1,100)})});
 click('leaveRoom',()=>{netLeave();setStatus('');showScreen('scrMain')});
 click('copyLink',()=>{
   const url=location.origin+location.pathname+'?room='+netCode;

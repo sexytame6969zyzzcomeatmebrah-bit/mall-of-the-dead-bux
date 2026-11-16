@@ -42,10 +42,10 @@ const server=http.createServer((req,res)=>{
 const wss=new WebSocketServer({server,maxPayload:512*1024,perMessageDeflate:{threshold:1024,zlibDeflateOptions:{level:3}}});
 const send=(ws,data)=>{if(ws.readyState===WebSocket.OPEN)ws.send(JSON.stringify(data))};
 const broadcast=(room,data,except)=>{const s=JSON.stringify(data);for(const m of room.members)if(m.ws!==except&&m.ws.readyState===WebSocket.OPEN)m.ws.send(s)};
-const publicMember=m=>({id:m.id,name:m.name,character:m.character,ready:m.ready});
+const publicMember=m=>({id:m.id,name:m.name,character:m.character,ready:m.ready,team:m.team|0});
 const cleanName=n=>String(n==null?'':n).replace(/[\u0000-\u001f\u007f<>]/g,'').trim().slice(0,16)||'Survivor';
 function lobby(room){
-  broadcast(room,{t:'lobby',code:room.code,host:room.members[0]?room.members[0].id:null,started:room.started,members:room.members.map(publicMember)});
+  broadcast(room,{t:'lobby',code:room.code,host:room.members[0]?room.members[0].id:null,started:room.started,vs:!!room.vs,members:room.members.map(publicMember)});
 }
 function newCode(){
   let code;
@@ -92,7 +92,7 @@ wss.on('connection',ws=>{
       const used=new Set(room.members.map(m=>m.character));
       const want=Number(msg.character);
       const character=Number.isInteger(want)&&want>=0&&want<CHAR_COUNT&&!used.has(want)?want:Array.from({length:CHAR_COUNT},(_,i)=>i).find(i=>!used.has(i));
-      const member={ws,id:ws.pid,name:cleanName(msg.name),character,ready:false};
+      const n1=room.members.filter(m=>m.team===1).length,member={ws,id:ws.pid,name:cleanName(msg.name),character,ready:false,team:n1*2<room.members.length?1:0};
       room.members.push(member);ws.room=room;
       send(ws,{t:'joined',id:ws.pid,code:room.code});
       if(room.started){ // drop-in: join a run that is already going
@@ -120,6 +120,8 @@ wss.on('connection',ws=>{
         if(Number.isInteger(c)&&c>=0&&c<CHAR_COUNT&&!room.members.some(m=>m!==member&&m.character===c)){member.character=c;lobby(room)}
         else send(ws,{t:'error',message:'Character already taken'});
       }else if(msg.t==='ready'){member.ready=!!msg.ready;lobby(room)}
+      else if(msg.t==='team'){member.team=msg.team===1?1:0;lobby(room)}
+      else if(msg.t==='opts'&&isHost){room.vs=!!msg.vs;lobby(room)}
       else if(msg.t==='start'&&isHost&&room.members.every(m=>m.ready||m===member)){
         room.started=true;room.mode=msg.mode==='ffa'?'ffa':msg.mode==='tdm'?'tdm':'arena';room.map=['metro','city','dust'].includes(msg.map)?msg.map:'mall';room.wave=Math.max(1,Math.min(100,Math.floor(Number(msg.wave))||1));
         broadcast(room,{t:'begin',host:member.id,members:room.members.map(publicMember),wave:room.wave,map:room.map,mode:room.mode});
