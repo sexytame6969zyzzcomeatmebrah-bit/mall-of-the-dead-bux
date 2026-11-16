@@ -2147,6 +2147,9 @@ function pvJoin(p){ // drop-in: put the newcomer on the smaller team
   const n=[0,0],h=players.find(q=>q!==p&&!q.bot);for(const q of players)if(q!==p)n[q.team||0]++;
   p.team=pvVs&&h?(h.team||0):(p.pteam!=null&&!pvVs?p.pteam:n[0]<=n[1]?0:1);p.kills=0;p.deaths=0;p.score=0;pvSpawn(p);
 }
+// weighted pick of a gun slot (1 LMG, 2 shotgun, 3 RPG, 4 flamer, 5 chainsaw)
+const PV_WEIGHT=[0,3,3,1,2,2];
+function pvPrimary(){let r=Math.random()*11;for(let i=1;i<=5;i++){r-=PV_WEIGHT[i];if(r<=0)return i}return 1}
 function pvSpawn(p){
   let best=null,bs=-1;
   for(let k=0;k<30;k++){
@@ -2156,8 +2159,9 @@ function pvSpawn(p){
   }
   const s=best||[START.x,START.y];
   p.x=s[0];p.y=s[1];p.hp=p.maxHp=100;p.ammo=GUNS.map(g=>g.clip);if(p.weapon===MINI)p.weapon=0;
+  const w=pvPrimary();p.gunLock=62&~(1<<w);p.weapon=w; // 1911 + one random primary; the rest are found on the map
   p.reload=0;p.reloadTotal=0;p.grenades=2;p.knockdown=0;p.dashT=0;p.dvx=p.dvy=0;p.combo=0;p.downed=false;p.respT=0;p.damageVoicePlayed=false;
-  p.invuln=PV_PROT;p.prot=true;p.tp++;p.gunLock=0;
+  p.invuln=PV_PROT;p.prot=true;p.tp++;
   fx(['revive',p.id]);
 }
 
@@ -2296,10 +2300,11 @@ function pvUpdate(dt){
   updatePickups(dt);
   pvPick-=dt;
   if(pvPick<=0){
-    pvPick=9;
-    if(pickups.length<5&&pvSpots.length){
+    pvPick=7;
+    if(pickups.length<7&&pvSpots.length){
       const s=pvSpots[(Math.random()*pvSpots.length)|0],r=Math.random();
-      pickups.push({id:nextEid++,type:r<.55?'medsmall':r<.8?'medkit':'nade',x:s[0],y:s[1],life:40});
+      if(r<.5)pickups.push({id:nextEid++,type:'w'+pvPrimary(),x:s[0],y:s[1],life:50,drop:true});
+      else pickups.push({id:nextEid++,type:r<.75?'medsmall':r<.88?'medkit':'nade',x:s[0],y:s[1],life:40});
     }
   }
   pv.rs=players.filter(p=>p.hp<=0).map(p=>[p.id,r2(p.respT)]);
@@ -2749,7 +2754,7 @@ function playFx(ev){
       const p=playerById(ev[1]);if(!p)break;p.hurtT=.18;burst(p.x,p.y,3,['#cf3038','#8f151c'],2.5,.35,4,.8);
       if(p===me){hurtFlash=Math.min(.6,hurtFlash+.22+ev[2]*.012);sfx('hurt');if(COARSE&&navigator.vibrate)navigator.vibrate(25)}
       break}
-    case 'down':playVoice('deathSound',.5);break; // the user's death clip replaces the old synth thud
+    case 'down':playVoice('deathSound',.05);break; // the user's death clip replaces the old synth thud
     case 'pvk':pvFeedAdd(ev[1],ev[2],ev[3]);break;
     case 'revive':{const p=playerById(ev[1]);sfx('revive');if(p)rings.push({k:9,x:p.x,y:p.y,r:1.6,life:.6,max:.6,c:'#7fffc1'});break}
     case 'dash':{if(fxFromNet&&ev[1]===netId)break;const p=playerById(ev[1]);if(p){sfx('dash',p.x,p.y);burst(p.x,p.y,7,['#ffffff','#cfe9ff'],2,.3,4,.3,0)}break}
@@ -4469,7 +4474,7 @@ click('teamR',()=>netSend({t:'team',team:0}));click('teamB',()=>netSend({t:'team
 function lobbyDraw(){
   const mine=netMembers.find(m=>m.id===netId);
   $('roomCode').textContent=netCode||'';
-  $('roomRoster').innerHTML=netMembers.map(m=>`<div class="r"><span><i class="dot" style="background:${TEAM_COL[m.team|0]}"></i> ${m.id===hostId?'👑 ':''}${escapeHTML(m.name)}${m.id===netId?' (you)':''} · ${(characters[m.character]||characters[0]).name}</span><span class="${m.ready||m.id===hostId?'ok':'wait'}">${m.id===hostId?'HOST':m.ready?'✔ READY':'○ NOT READY'}</span></div>`).join('');
+  $('roomRoster').innerHTML=netMembers.map(m=>`<div class="r"><span><i class="dot" style="background:${TEAM_COL[m.team|0]}"></i> ${m.id===hostId?'👑 ':''}${escapeHTML(m.name)}${m.id===netId?' (you)':''} <b style="color:${TEAM_COL[m.team|0]}">[${TEAM_NAME[m.team|0]}]</b> · ${(characters[m.character]||characters[0]).name}</span><span class="${m.ready||m.id===hostId?'ok':'wait'}">${m.id===hostId?'HOST':m.ready?'✔ READY':'○ NOT READY'}</span></div>`).join('');
   buildChars($('onlineCharacters'),mine?mine.character:-1,i=>netSend({t:'select',character:i}),i=>netMembers.some(m=>m.character===i&&m.id!==netId));
   $('teamR').className=mine&&!mine.team?'sel':'';$('teamB').className=mine&&mine.team?'sel':'';
   $('vsNote').textContent=netVs?'Team Deathmatch: HUMANS vs AI. Everyone plays on the host\'s team.':'Team Deathmatch only: pick RED or BLUE.';
@@ -4700,7 +4705,7 @@ function hudUpdate(){
   const boss=zombies.find(z=>ZT[z.t].boss);
   $('bossWrap').style.display=boss&&state==='playing'?'block':'none';
   if(boss){setText('bossName',ZT[boss.t].label);$('bossFill').style.transform=`scaleX(${clamp(boss.hp/boss.maxHp,0,1)})`}
-  setHTML('slots',GUNS.map((g,i)=>i===6&&!hasGun(me,6)?'':`<span class="slot${hasGun(me,i)?' own':''}${i===me.weapon?' cur':''}">${i+1} ${hasGun(me,i)?g.name:owned(i)?'STOLEN':'?'}</span>`).join(''));
+  setHTML('slots',GUNS.map((g,i)=>i===6&&!hasGun(me,6)?'':`<span class="slot${hasGun(me,i)?' own':''}${i===me.weapon?' cur':''}">${i+1} ${hasGun(me,i)?g.name:owned(i)&&!isPvp()?'STOLEN':'—'}</span>`).join(''));
   const clip=clipOf(me,me.weapon),am=me.ammo[me.weapon];
   if(me.weapon===MINI){const sec=am*GUNS[MINI].rate*rateMul(me);setText('ammoBig','MINIGUN '+sec.toFixed(1)+'s');$('ammoBig').className=sec<3?'low':''}
   else{setText('ammoBig',me.reload>0?'RELOADING':(COARSE?GUNS[me.weapon].name+' ':'')+am+' / '+clip);
